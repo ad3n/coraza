@@ -96,8 +96,8 @@ func minLen(re *syntax.Regexp) int {
 		// inputs that the regex would actually match.
 		n := 0
 		for _, r := range re.Rune {
-			switch {
-			case r == utf8.RuneError:
+			switch r {
+			case utf8.RuneError:
 				n++
 			default:
 				n += utf8.RuneLen(r)

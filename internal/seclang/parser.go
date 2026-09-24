@@ -142,8 +142,8 @@ func (p *Parser) parseString(data string) error {
 		}
 
 		// Check if line ends with \
-		switch {
-		case line[lineLen-1] == '\\':
+		switch line[lineLen-1] {
+		case '\\':
 			linebuffer.WriteString(strings.TrimSuffix(line, "\\"))
 		default:
 			linebuffer.WriteString(line)

@@ -520,8 +520,8 @@ func TestParseCtl(t *testing.T) {
 				t.Errorf("unexpected key, want: %s, have: %s", tCase.expectKey, colKey)
 			}
 
-			switch {
-			case tCase.expectKeyRx == "":
+			switch tCase.expectKeyRx {
+			case "":
 				if colKeyRx != nil {
 					t.Errorf("unexpected non-nil regex, have: %s", colKeyRx.String())
 				}

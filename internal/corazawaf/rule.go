@@ -175,8 +175,8 @@ func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, 
 	logger := tx.DebugLogger()
 
 	if logger.Debug().IsEnabled() {
-		switch {
-		case r.ID_ == noID:
+		switch r.ID_ {
+		case noID:
 			logger = logger.With(debuglog.Str("rule_ref", fmt.Sprintf("%s#L%d", r.File_, r.Line_)))
 		default:
 			logger = logger.With(debuglog.Int("rule_id", r.ID_))
@@ -216,8 +216,8 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 
 	ruleCol.SetIndex("severity", 0, r.Severity_.String())
 	// SecMark and SecAction uses nil operator
-	switch {
-	case r.operator == nil:
+	switch r.operator {
+	case nil:
 		logger.Debug().Msg("Forcing rule to match")
 		md := &corazarules.MatchData{}
 		if r.ParentID_ != noID || r.MultiMatch {
@@ -381,8 +381,8 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			chainLevel++
 
 			var nrLogger debuglog.Logger
-			switch {
-			case nr.ID_ == noID:
+			switch nr.ID_ {
+			case noID:
 				nrLogger = logger.With(debuglog.Str("chain_rule_ref", fmt.Sprintf("%s#L%d", nr.File_, nr.Line_)))
 			default:
 				nrLogger = logger.With(debuglog.Int("chain_rule_id", nr.ID_))

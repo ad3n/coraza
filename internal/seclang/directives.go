@@ -481,8 +481,8 @@ func directiveSecRuleRemoveByID(options *DirectiveOptions) error {
 
 	idsOrRanges := strings.Fields(options.Opts)
 	for _, idOrRange := range idsOrRanges {
-		switch idx := strings.Index(idOrRange, "-"); {
-		case idx == -1:
+		switch idx := strings.Index(idOrRange, "-"); idx {
+		case -1:
 			id, err := strconv.Atoi(idOrRange)
 			if err != nil {
 				return err
@@ -1437,8 +1437,8 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 	// The last element is expected to be the variable(s)
 	variables := idsOrRanges[length-1]
 	for _, idOrRange := range idsOrRanges[:length-1] {
-		switch idx := strings.Index(idOrRange, "-"); {
-		case idx == -1:
+		switch idx := strings.Index(idOrRange, "-"); idx {
+		case -1:
 			id, err := strconv.Atoi(idOrRange)
 			if err != nil {
 				return err
@@ -1545,8 +1545,8 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 	// The last element is expected to be the action(s)
 	actions := idsOrRanges[idsOrRangesLen-1]
 	for _, idOrRange := range idsOrRanges[:idsOrRangesLen-1] {
-		switch idx := strings.Index(idOrRange, "-"); {
-		case idx == -1:
+		switch idx := strings.Index(idOrRange, "-"); idx {
+		case -1:
 			id, err := strconv.Atoi(idOrRange)
 			if err != nil {
 				return err

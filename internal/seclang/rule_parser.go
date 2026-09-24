@@ -522,8 +522,8 @@ func cutQuotedString(s string) (string, string, error) {
 		// track the longest sequence of backslashes preceding the quote
 		// reset the count when a non-backslash character is encountered
 		if s[i] != '"' {
-			switch {
-			case s[i] == '\\':
+			switch s[i] {
+			case '\\':
 				previousEscapeCount++
 			default:
 				previousEscapeCount = 0
@@ -605,8 +605,8 @@ func parseActions(logger debuglog.Logger, actions string) ([]ruleAction, error) 
 			afterKey = i
 		case ',':
 			var val string
-			switch {
-			case afterKey == -1:
+			switch afterKey {
+			case -1:
 				// No value, we only have a key
 				afterKey = i
 			default:
@@ -631,8 +631,8 @@ func parseActions(logger debuglog.Logger, actions string) ([]ruleAction, error) 
 	}
 
 	var val string
-	switch {
-	case afterKey == -1:
+	switch afterKey {
+	case -1:
 		// No value, we only have a key
 		afterKey = len(actions)
 	default:
@@ -715,8 +715,8 @@ func mergeActions(origin []ruleAction, defaults []ruleAction) []ruleAction {
 
 	hasDa := false
 	for _, action := range origin {
-		switch {
-		case action.Atype == plugintypes.ActionTypeDisruptive:
+		switch action.Atype {
+		case plugintypes.ActionTypeDisruptive:
 			if action.Key != "block" {
 				hasDa = true
 				// We add the default rule DA in case this is no block

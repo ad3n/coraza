@@ -310,8 +310,8 @@ func generateChainMatches(tx *Transaction, matchedValues []types.MatchData, curr
 	for _, mv := range matchedValues {
 		if mv.ChainLevel() == currentDepth {
 			var localebuildingMatchedChain []types.MatchData
-			switch {
-			case buildingMatchedChain == nil:
+			switch buildingMatchedChain {
+			case nil:
 				localebuildingMatchedChain = []types.MatchData{}
 			default:
 				localebuildingMatchedChain = make([]types.MatchData, len(buildingMatchedChain))

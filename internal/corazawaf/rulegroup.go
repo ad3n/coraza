@@ -212,8 +212,8 @@ RulesLoop:
 
 		// we always evaluate secmarkers
 		if tx.SkipAfter != "" {
-			switch {
-			case r.SecMark_ == tx.SkipAfter:
+			switch r.SecMark_ {
+			case tx.SkipAfter:
 				tx.SkipAfter = ""
 			default:
 				tx.DebugLogger().Debug().

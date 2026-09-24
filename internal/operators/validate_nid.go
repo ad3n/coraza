@@ -102,8 +102,8 @@ func nidCl(nid string) bool {
 	var ndv string
 	for ; rut != 0; rut /= 10 {
 		sum += rut % 10 * factor
-		switch {
-		case factor == 7:
+		switch factor {
+		case 7:
 			factor = 2
 		default:
 			factor++

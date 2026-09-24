@@ -280,8 +280,8 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 
 		tx.RuleEngine = re
 	case ctlRuleRemoveByID:
-		switch idx := strings.Index(a.value, "-"); {
-		case idx == -1:
+		switch idx := strings.Index(a.value, "-"); idx {
+		case -1:
 			id, err := strconv.Atoi(a.value)
 			if err != nil {
 				tx.DebugLogger().Error().

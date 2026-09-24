@@ -27,8 +27,8 @@ func doURLEncode(input string) (string, bool) {
 	for i := range inputLen {
 		cc := input[i]
 
-		switch {
-		case cc == ' ':
+		switch cc {
+		case ' ':
 			d.WriteByte('+')
 			changed = true
 		default:

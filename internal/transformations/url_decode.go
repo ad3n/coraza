@@ -24,8 +24,8 @@ func doURLDecode(input string, d []byte, pos int) string {
 	c := pos
 
 	for i < inputLen {
-		switch {
-		case input[i] == '%':
+		switch input[i] {
+		case '%':
 			/* Character is a percent sign. */
 
 			/* Are there enough bytes available? */
@@ -54,8 +54,8 @@ func doURLDecode(input string, d []byte, pos int) string {
 			}
 		default:
 			/* Character is not a percent sign. */
-			switch {
-			case input[i] == '+':
+			switch input[i] {
+			case '+':
 				d[c] = ' '
 				c++
 			default:

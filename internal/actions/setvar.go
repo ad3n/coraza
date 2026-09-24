@@ -183,8 +183,8 @@ func (a *setvarFn) evaluateTxCollection(r plugintypes.RuleMetadata, tx plugintyp
 			}
 		}
 
-		switch {
-		case value[0] == '+':
+		switch value[0] {
+		case '+':
 			col.Set(key, []string{strconv.Itoa(currentValInt + val)})
 		default:
 			col.Set(key, []string{strconv.Itoa(currentValInt - val)})

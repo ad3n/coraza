@@ -113,8 +113,8 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, res map[strin
 		// Avoid string concatenation to maintain a single buffer for key aggregation.
 		prevParentLength := len(objKey)
 		objKey = append(objKey, '.')
-		switch {
-		case key.Type == gjson.String:
+		switch key.Type {
+		case gjson.String:
 			objKey = append(objKey, key.Str...)
 		default:
 			objKey = strconv.AppendInt(objKey, int64(key.Num), 10)

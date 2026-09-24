@@ -32,8 +32,8 @@ func cssDecodeInplace(input string, pos int) string {
 
 	for i < inputLen {
 		/* Is the character a backslash? */
-		switch {
-		case input[i] == '\\':
+		switch input[i] {
+		case '\\':
 			/* Is there at least one more byte? */
 			switch {
 			case i+1 < inputLen:

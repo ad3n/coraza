@@ -257,8 +257,8 @@ func TestAuditLogOnWithNoLog(t *testing.T) {
 	tx.ProcessLogging()
 	var al2 auditlog.Log
 	// there should be no audit log because of nolog
-	switch err := json.NewDecoder(file).Decode(&al2); {
-	case err == nil:
+	switch err := json.NewDecoder(file).Decode(&al2); err {
+	case nil:
 		if al2.Messages() != nil {
 			t.Errorf("Unexpected rule logged")
 		}

@@ -457,8 +457,8 @@ func TestDirectives(t *testing.T) {
 						WAF:  waf,
 					})
 
-					switch {
-					case tCase.check == nil:
+					switch tCase.check {
+					case nil:
 						if err == nil {
 							t.Error("expected error")
 						}

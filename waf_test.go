@@ -56,8 +56,8 @@ func TestRequestBodyLimit(t *testing.T) {
 			cfg.requestBodyInMemoryLimit = &tCase.inMemoryLimit
 
 			_, err := NewWAF(cfg)
-			switch {
-			case tCase.expectedErr == nil:
+			switch tCase.expectedErr {
+			case nil:
 				if err != nil {
 					t.Fatalf("unexpected error: %s", err.Error())
 				}
@@ -98,8 +98,8 @@ func TestResponseBodyLimit(t *testing.T) {
 			cfg.responseBodyLimit = &tCase.limit
 
 			_, err := NewWAF(cfg)
-			switch {
-			case tCase.expectedErr == nil:
+			switch tCase.expectedErr {
+			case nil:
 				if err != nil {
 					t.Fatalf("unexpected error: %s", err.Error())
 				}

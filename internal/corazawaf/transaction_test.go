@@ -1321,8 +1321,8 @@ func TestCookiesNotUrldecoded(t *testing.T) {
 	tx.AddRequestHeader("cookie", fullCookie)
 	c := tx.variables.requestCookies.Get("abc")[0]
 	if c != expectedUrlencodedAbcCookieValue {
-		switch {
-		case c == unexpectedUrldencodedAbcCookieValue:
+		switch c {
+		case unexpectedUrldencodedAbcCookieValue:
 			t.Errorf("failed to set cookie, unexpected urldecoding. Got: %q, expected: %q", unexpectedUrldencodedAbcCookieValue, expectedUrlencodedAbcCookieValue)
 		default:
 			t.Errorf("failed to set cookie, got %q", c)
