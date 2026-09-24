@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/internal/sync"
 )
 
 const timeout = 500 * time.Millisecond
@@ -36,8 +37,14 @@ const timeout = 500 * time.Millisecond
 // SecRule REMOTE_ADDR "@rbl dnsbl.example.com" "id:184,deny"
 // ```
 type rbl struct {
-	service  string
-	resolver *net.Resolver
+	service    string
+	resolver   *net.Resolver
+	resultPool sync.Pool
+}
+
+type rblResult struct {
+	txt     []string
+	matched bool
 }
 
 var _ plugintypes.Operator = (*rbl)(nil)
@@ -48,6 +55,9 @@ func newRBL(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	return &rbl{
 		service:  data,
 		resolver: net.DefaultResolver,
+		resultPool: sync.NewPool(func() any {
+			return make(chan rblResult, 1)
+		}),
 	}, nil
 }
 
@@ -55,49 +65,40 @@ func newRBL(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 // https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/operators/rbl.cc
 func (o *rbl) Evaluate(tx plugintypes.TransactionState, ipAddr string) bool {
 	// TODO validate address
-	resC := make(chan bool)
+	resC := o.resultPool.Get().(chan rblResult)
 	ctx, cancel := context.WithCancel(context.Background())
-
-	defer func() {
-		cancel()
-	}()
+	defer cancel()
 
 	addr := fmt.Sprintf("%s.%s", ipAddr, o.service)
-	var captures []string
 	go func(ctx context.Context) {
-		defer func() {
-			close(resC)
-		}()
 		res, err := o.resolver.LookupHost(ctx, addr)
-
 		if err != nil {
-			resC <- false
+			resC <- rblResult{}
 			return
 		}
-		// var status string
-		if len(res) > 0 {
-			txt, err := o.resolver.LookupTXT(ctx, addr)
-			if err != nil {
-				resC <- false
-				return
-			}
 
-			if len(txt) > 0 {
-				status := txt[0]
-				captures = append(captures, status)
-				tx.Variables().TX().Set("httpbl_msg", []string{status})
+		var txt []string
+		if len(res) > 0 {
+			txt, err = o.resolver.LookupTXT(ctx, addr)
+			if err != nil {
+				resC <- rblResult{}
+				return
 			}
 		}
 
-		resC <- true
+		resC <- rblResult{txt: txt, matched: true}
 	}(ctx)
 
 	select {
 	case res := <-resC:
-		if res && len(captures) > 0 {
-			tx.CaptureField(0, captures[0])
+		o.resultPool.Put(resC)
+		if res.matched && len(res.txt) > 0 {
+			status := res.txt[0]
+			tx.Variables().TX().Set("httpbl_msg", []string{status})
+			tx.CaptureField(0, status)
 		}
-		return res
+
+		return res.matched
 	case <-time.After(timeout):
 		return false
 	}

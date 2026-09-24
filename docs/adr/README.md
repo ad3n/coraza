@@ -126,4 +126,6 @@ Superseding does not delete the old record. Set its status and let the history s
 
 | [0057](0057-fork-module-identity.md) | Not opened | Pending | unreleased (post-v3.7.0) | R | Fork module identity and JSON dependency |
 
+| [0058](0058-rbl-result-channel-pooling.md) | Not opened | Pending | unreleased (post-v3.7.0) | ⚡ | Pool completed RBL result channels |
+
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor
