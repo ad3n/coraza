@@ -19,20 +19,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/auditlog"
-	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
-	"github.com/corazawaf/coraza/v3/internal/collections"
-	"github.com/corazawaf/coraza/v3/internal/cookies"
-	"github.com/corazawaf/coraza/v3/internal/corazarules"
-	"github.com/corazawaf/coraza/v3/internal/corazatypes"
-	"github.com/corazawaf/coraza/v3/internal/environment"
-	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
-	urlutil "github.com/corazawaf/coraza/v3/internal/url"
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/ad3n/coraza/v3/collection"
+	"github.com/ad3n/coraza/v3/debuglog"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/internal/auditlog"
+	"github.com/ad3n/coraza/v3/internal/bodyprocessors"
+	"github.com/ad3n/coraza/v3/internal/collections"
+	"github.com/ad3n/coraza/v3/internal/cookies"
+	"github.com/ad3n/coraza/v3/internal/corazarules"
+	"github.com/ad3n/coraza/v3/internal/corazatypes"
+	"github.com/ad3n/coraza/v3/internal/environment"
+	stringsutil "github.com/ad3n/coraza/v3/internal/strings"
+	urlutil "github.com/ad3n/coraza/v3/internal/url"
+	"github.com/ad3n/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/types/variables"
 )
 
 // Transaction is created from a WAF instance to handle web requests and responses,
@@ -377,15 +377,17 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 	if key == "" {
 		return
 	}
+
 	keyl := strings.ToLower(key)
 	tx.variables.requestHeaders.Add(key, value)
 
 	switch keyl {
 	case "content-type":
 		val := strings.ToLower(value)
-		if val == "application/x-www-form-urlencoded" {
+		switch {
+		case val == "application/x-www-form-urlencoded":
 			tx.variables.reqbodyProcessor.Set("URLENCODED")
-		} else if strings.HasPrefix(val, "multipart/form-data") {
+		case strings.HasPrefix(val, "multipart/form-data"):
 			tx.variables.reqbodyProcessor.Set("MULTIPART")
 		}
 	case "cookie":
@@ -527,11 +529,13 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
 func (tx *Transaction) matchVariable(match *corazarules.MatchData) {
 	var varName string
-	if match.Key_ != "" {
+	switch {
+	case match.Key_ != "":
 		varName = match.Variable().Name() + ":" + match.Key_
-	} else {
+	default:
 		varName = match.Variable().Name()
 	}
+
 	// Array of values
 	matchedVars := tx.variables.matchedVars
 	// Last key
@@ -633,16 +637,18 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 	// Now that we have access to the collection, we can apply the exceptions
 	switch {
 	case rv.KeyRx != nil:
-		if m, ok := col.(collection.Keyed); ok {
+		switch m, ok := col.(collection.Keyed); {
+		case ok:
 			matches = m.FindRegex(rv.KeyRx)
-		} else {
+		default:
 			// This should probably never happen, selectability is checked at parsing time
 			tx.debugLogger.Error().Str("collection", rv.Variable.Name()).Msg("attempted to use regex with non-selectable collection")
 		}
 	case rv.KeyStr != "":
-		if m, ok := col.(collection.Keyed); ok {
+		switch m, ok := col.(collection.Keyed); {
+		case ok:
 			matches = m.FindString(rv.KeyStr)
-		} else {
+		default:
 			// This should probably never happen, selectability is checked at parsing time
 			tx.debugLogger.Error().Str("collection", rv.Variable.Name()).Msg("attempted to use string with non-selectable collection")
 		}
@@ -663,11 +669,13 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 				break
 			}
 		}
+
 		if !isException {
 			matches[filteredCount] = c
 			filteredCount++
 		}
 	}
+
 	matches = matches[:filteredCount]
 
 	if rv.Count {
@@ -680,6 +688,7 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 			},
 		}
 	}
+
 	return matches
 }
 
@@ -830,10 +839,12 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 	if in := strings.Index(uri, "#"); in != -1 {
 		uri = uri[:in]
 	}
+
 	path := ""
 	parsedURL, err := url.ParseRequestURI(uri)
 	query := ""
-	if err != nil {
+	switch {
+	case err != nil:
 		tx.variables.urlencodedError.Set(err.Error())
 		path = uri
 		tx.variables.requestURI.Set(uri)
@@ -849,18 +860,21 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 			}
 			tx.Variables.RequestUri.Set(uri)
 		*/
-	} else {
+	default:
 		tx.ExtractGetArguments(parsedURL.RawQuery)
 		tx.variables.requestURI.Set(parsedURL.String())
 		path = parsedURL.Path
 		query = parsedURL.RawQuery
 	}
+
 	offset := strings.LastIndexAny(path, "/\\")
-	if offset != -1 && len(path) > offset+1 {
+	switch {
+	case offset != -1 && len(path) > offset+1:
 		tx.variables.requestBasename.Set(path[offset+1:])
-	} else {
+	default:
 		tx.variables.requestBasename.Set(path)
 	}
+
 	tx.variables.requestFilename.Set(path)
 
 	tx.variables.queryString.Set(query)
@@ -1005,7 +1019,8 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 		writingBytes          int64
 		runProcessRequestBody = false
 	)
-	if l, ok := r.(ByteLenger); ok {
+	switch l, ok := r.(ByteLenger); {
+	case ok:
 		writingBytes = int64(l.Len())
 		// Overflow check
 		if tx.requestBodyBuffer.length >= (math.MaxInt64 - writingBytes) {
@@ -1013,6 +1028,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 			// bytes.Buffer does not work with this kind of sizes. See comments in BodyBuffer Write(data []byte)
 			return nil, 0, errors.New("overflow reached while writing request body")
 		}
+
 		if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
 			tx.variables.inboundDataError.Set("1")
 			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
@@ -1024,7 +1040,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 				runProcessRequestBody = true
 			}
 		}
-	} else {
+	default:
 		writingBytes = tx.RequestBodyLimit - tx.requestBodyBuffer.length
 	}
 
@@ -1049,6 +1065,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 		tx.debugLogger.Warn().Msg("Processing request body whose size reached the configured limit (Action ProcessPartial)")
 		_, err = tx.ProcessRequestBody()
 	}
+
 	return tx.interruption, int(w), err
 }
 
@@ -1266,7 +1283,8 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 		writingBytes           int64
 		runProcessResponseBody = false
 	)
-	if l, ok := r.(ByteLenger); ok {
+	switch l, ok := r.(ByteLenger); {
+	case ok:
 		writingBytes = int64(l.Len())
 		if tx.responseBodyBuffer.length+writingBytes >= tx.ResponseBodyLimit {
 			tx.variables.outboundDataError.Set("1")
@@ -1279,7 +1297,7 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 				runProcessResponseBody = true
 			}
 		}
-	} else {
+	default:
 		writingBytes = tx.ResponseBodyLimit - tx.responseBodyBuffer.length
 	}
 
@@ -1303,6 +1321,7 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 	if runProcessResponseBody {
 		_, err = tx.ProcessResponseBody()
 	}
+
 	return tx.interruption, int(w), err
 }
 
@@ -1337,6 +1356,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 			// the end of http stream
 			tx.debugLogger.Warn().Msg("Skipping anomalous call to ProcessResponseBody. It has been called before response headers evaluation")
 		}
+
 		return nil, nil
 	}
 
@@ -1353,7 +1373,8 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		return tx.interruption, err
 	}
 
-	if bp := tx.variables.resBodyProcessor.Get(); bp != "" {
+	switch bp := tx.variables.resBodyProcessor.Get(); {
+	case bp != "":
 		b, err := bodyprocessors.GetBodyProcessor(bp)
 		if err != nil {
 			tx.generateResponseBodyError(errors.New("invalid body processor"))
@@ -1366,15 +1387,17 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 			tx.debugLogger.Error().Err(err).Msg("Failed to process response body")
 			tx.generateResponseBodyError(err)
 		}
-	} else {
+	default:
 		buf := new(strings.Builder)
 		length, err := io.Copy(buf, reader)
 		if err != nil {
 			return tx.interruption, err
 		}
+
 		tx.variables.responseContentLength.Set(strconv.FormatInt(length, 10))
 		tx.variables.responseBody.Set(buf.String())
 	}
+
 	tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 	return tx.interruption, nil
 }
@@ -1399,21 +1422,23 @@ func (tx *Transaction) ProcessLogging() {
 	if tx.AuditEngine == types.AuditEngineRelevantOnly {
 		re := tx.WAF.AuditLogRelevantStatus
 		status := tx.variables.responseStatus.Get()
-		if tx.IsInterrupted() {
+		switch {
+		case tx.IsInterrupted():
 			status = strconv.Itoa(tx.interruption.Status)
-		} else if tx.IsDetectionOnlyInterrupted() {
+		case tx.IsDetectionOnlyInterrupted():
 			// This allows to check for relevant status even in detection only mode.
 			// Fixes https://github.com/corazawaf/coraza/issues/1333
 			status = strconv.Itoa(tx.detectionOnlyInterruption.Status)
 		}
 
-		if tx.audit {
+		switch {
+		case tx.audit:
 			// A rule triggered auditlog — still filter by relevant status if regex is set.
 			if re != nil && !re.Match([]byte(status)) {
 				tx.debugLogger.Debug().Msg("Transaction status not marked for audit logging")
 				return
 			}
-		} else {
+		default:
 			// No rule triggered auditlog — only log if status matches SecAuditLogRelevantStatus.
 			// Fixes https://github.com/corazawaf/coraza/issues/1576
 			if re == nil || !re.Match([]byte(status)) {
@@ -1639,16 +1664,18 @@ func (tx *Transaction) auditLogCollectFiles() []plugintypes.AuditLogTransactionR
 		var size int64
 		if fs := tx.variables.filesSizes.Get(file); len(fs) > 0 {
 			parsed, err := strconv.ParseInt(fs[0], 10, 64)
-			if err != nil {
+			switch {
+			case err != nil:
 				tx.DebugLogger().Debug().
 					Str("file", file).
 					Str("raw_size", fs[0]).
 					Err(err).
 					Msg("Failed to parse file size for audit log")
-			} else {
+			default:
 				size = parsed
 			}
 		}
+
 		ext := filepath.Ext(file)
 		at := auditlog.TransactionRequestFiles{
 			Size_: size,
@@ -1657,6 +1684,7 @@ func (tx *Transaction) auditLogCollectFiles() []plugintypes.AuditLogTransactionR
 		}
 		files = append(files, at)
 	}
+
 	return files
 }
 
@@ -1690,17 +1718,19 @@ func (tx *Transaction) Close() error {
 	if err := tx.requestBodyBuffer.Reset(); err != nil {
 		errs = append(errs, fmt.Errorf("reseting request body buffer: %v", err))
 	}
+
 	if err := tx.responseBodyBuffer.Reset(); err != nil {
 		errs = append(errs, fmt.Errorf("reseting response body buffer: %v", err))
 	}
 
-	if tx.IsInterrupted() {
+	switch {
+	case tx.IsInterrupted():
 		tx.debugLogger.Debug().
 			Bool("is_interrupted", tx.IsInterrupted()).
 			Int("status", tx.interruption.Status).
 			Int("rule_id", tx.interruption.RuleID).
 			Msg("Transaction finished")
-	} else {
+	default:
 		tx.debugLogger.Debug().
 			Bool("is_interrupted", false).
 			Msg("Transaction finished")
@@ -1938,11 +1968,12 @@ func NewTransactionVariables() *TransactionVariables {
 	// XML is a pointer to RequestXML
 	v.xml = v.requestXML
 
-	if shouldUseCaseSensitiveNamedCollection {
+	switch {
+	case shouldUseCaseSensitiveNamedCollection:
 		v.argsGet = collections.NewCaseSensitiveNamedCollection(variables.ArgsGet)
 		v.argsPost = collections.NewCaseSensitiveNamedCollection(variables.ArgsPost)
 		v.argsPath = collections.NewCaseSensitiveNamedCollection(variables.ArgsPath)
-	} else {
+	default:
 		v.argsGet = collections.NewNamedCollection(variables.ArgsGet)
 		v.argsPost = collections.NewNamedCollection(variables.ArgsPost)
 		v.argsPath = collections.NewNamedCollection(variables.ArgsPath)
@@ -2527,11 +2558,13 @@ type formattable interface {
 
 func (v *TransactionVariables) format(res *strings.Builder) {
 	v.All(func(_ variables.RuleVariable, col collection.Collection) bool {
-		if f, ok := col.(formattable); ok {
+		switch f, ok := col.(formattable); {
+		case ok:
 			f.Format(res)
-		} else {
+		default:
 			fmt.Fprintln(res, col)
 		}
+
 		return true
 	})
 }

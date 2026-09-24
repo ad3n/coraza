@@ -11,7 +11,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
 )
 
 const timeout = 500 * time.Millisecond

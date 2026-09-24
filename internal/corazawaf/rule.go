@@ -10,13 +10,13 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/corazarules"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/ad3n/coraza/v3/debuglog"
+	"github.com/ad3n/coraza/v3/experimental/plugins/macro"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/internal/corazarules"
+	utils "github.com/ad3n/coraza/v3/internal/strings"
+	"github.com/ad3n/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/types/variables"
 )
 
 // ruleActionParams is used as a wrapper to store the action name
@@ -175,9 +175,10 @@ func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, 
 	logger := tx.DebugLogger()
 
 	if logger.Debug().IsEnabled() {
-		if r.ID_ == noID {
+		switch {
+		case r.ID_ == noID:
 			logger = logger.With(debuglog.Str("rule_ref", fmt.Sprintf("%s#L%d", r.File_, r.Line_)))
-		} else {
+		default:
 			logger = logger.With(debuglog.Int("rule_id", r.ID_))
 		}
 	}
@@ -206,14 +207,17 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 		// returns the fully expanded message, matching ModSecurity behavior.
 		ruleCol.SetIndex("msg", 0, r.Msg.Expand(tx))
 	}
+
 	ruleCol.SetIndex("rev", 0, r.Rev_)
 	if r.LogData != nil {
 		// Same expansion for logdata, matching ModSecurity behavior for %{rule.logdata}.
 		ruleCol.SetIndex("logdata", 0, r.LogData.Expand(tx))
 	}
+
 	ruleCol.SetIndex("severity", 0, r.Severity_.String())
 	// SecMark and SecAction uses nil operator
-	if r.operator == nil {
+	switch {
+	case r.operator == nil:
 		logger.Debug().Msg("Forcing rule to match")
 		md := &corazarules.MatchData{}
 		if r.ParentID_ != noID || r.MultiMatch {
@@ -221,27 +225,32 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			if r.Msg != nil {
 				md.Message_ = r.Msg.Expand(tx)
 			}
+
 			if r.LogData != nil {
 				md.Data_ = r.LogData.Expand(tx)
 			}
 		}
+
 		matchedValues = append(matchedValues, md)
 		if multiphaseEvaluation {
 			*collectiveMatchedValues = append(*collectiveMatchedValues, md)
 		}
+
 		r.matchVariable(tx, md)
-	} else {
+	default:
 		// Chain children carry ID_ == noID; ctl:ruleRemoveTarget* stores exceptions
 		// under the parent's ID, so chain children must look up via ParentID_.
 		rid := r.ID_
 		if rid == noID {
 			rid = r.ParentID_
 		}
+
 		ecol := tx.ruleRemoveTargetByID[rid]
 		for _, v := range r.variables {
 			if multiphaseEvaluation && multiphaseSkipVariable(r, v.Variable, phase) {
 				continue
 			}
+
 			var values []types.MatchData
 			for _, c := range ecol {
 				if c.Variable == v.Variable {
@@ -256,25 +265,29 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			if logger.Debug().IsEnabled() {
 				vLog = logger.With(debuglog.Str("variable", v.Variable.Name()))
 			}
+
 			vLog.Debug().Msg("Expanding arguments for rule")
 
 			args := make([]string, 1)
 			var errs []error
 			var argsLen int
 			for i, arg := range values {
-				if r.MultiMatch {
+				switch {
+				case r.MultiMatch:
 					args, errs = r.transformMultiMatchArg(arg)
 					argsLen = len(args)
-				} else {
+				default:
 					args[0], errs = r.transformArg(arg, i, cache)
 					argsLen = 1
 				}
+
 				if len(errs) > 0 {
 					vWarnLog := vLog.Warn()
 					if vWarnLog.IsEnabled() {
 						for _, err := range errs {
 							vWarnLog = vWarnLog.Err(err)
 						}
+
 						vWarnLog.Msg("Error transforming argument for rule")
 					}
 				}
@@ -288,7 +301,8 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 						Str("arg", carg)
 
 					match := r.executeOperator(carg, tx)
-					if match {
+					switch {
+					case match:
 						mr := &corazarules.MatchData{
 							Variable_:   arg.Variable(),
 							Key_:        arg.Key(),
@@ -307,18 +321,21 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 							if r.Msg != nil {
 								mr.Message_ = r.Msg.Expand(tx)
 							}
+
 							if r.LogData != nil {
 								mr.Data_ = r.LogData.Expand(tx)
 							}
 						}
 
-						if !multiphaseEvaluation {
+						switch {
+						case !multiphaseEvaluation:
 							matchedValues = append(matchedValues, mr)
-						} else {
+						default:
 							if isMultiphaseDoubleEvaluation(tx, phase, r, collectiveMatchedValues, mr) {
 								// This variables chain already matched, let's evaluate the next variable
 								continue
 							}
+
 							// For multiphase evaluation, the append to matchedValues is delayed after checking that the variable has not already matched
 							matchedValues = append(matchedValues, mr)
 							// For multiphase evaluation, the non disruptive actions execution is enforced here, after having checked that the rule
@@ -332,17 +349,19 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 									a.Function.Evaluate(r, tx)
 								}
 							}
+
 							// Msg and LogData have to be expanded again because actions execution might have changed them
 							if r.Msg != nil {
 								mr.Message_ = r.Msg.Expand(tx)
 							}
+
 							if r.LogData != nil {
 								mr.Data_ = r.LogData.Expand(tx)
 							}
 						}
 
 						evalLog.Msg("Evaluating operator: MATCH")
-					} else {
+					default:
 						evalLog.Msg("Evaluating operator: NO MATCH")
 					}
 				}
@@ -362,9 +381,10 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			chainLevel++
 
 			var nrLogger debuglog.Logger
-			if nr.ID_ == noID {
+			switch {
+			case nr.ID_ == noID:
 				nrLogger = logger.With(debuglog.Str("chain_rule_ref", fmt.Sprintf("%s#L%d", nr.File_, nr.Line_)))
-			} else {
+			default:
 				nrLogger = logger.With(debuglog.Int("chain_rule_id", nr.ID_))
 			}
 
@@ -372,6 +392,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			if len(matchedChainValues) == 0 {
 				return matchedChainValues
 			}
+
 			matchedValues = append(matchedValues, matchedChainValues...)
 			nr = nr.Chain
 		}
@@ -382,6 +403,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			if r.Msg != nil {
 				matchedValues[0].(*corazarules.MatchData).Message_ = r.Msg.Expand(tx)
 			}
+
 			if r.LogData != nil {
 				matchedValues[0].(*corazarules.MatchData).Data_ = r.LogData.Expand(tx)
 			}
@@ -403,13 +425,16 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 				// are evaluated previously, during the variable matching.
 				continue
 			}
+
 			a.Function.Evaluate(r, tx)
 		}
+
 		if r.ID_ != noID {
 			// we avoid matching chains and secmarkers
 			tx.MatchRule(r, matchedValues)
 		}
 	}
+
 	return matchedValues
 }
 
@@ -452,6 +477,7 @@ func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transform
 					// Full chain cached — nothing more to compute
 					return cached.arg, cached.errs
 				}
+
 				value = cached.arg
 				errs = cached.errs
 				startIdx = i + 1
@@ -463,9 +489,10 @@ func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transform
 		// so later rules sharing a prefix can reuse our work.
 		for i := startIdx; i < len(r.transformations); i++ {
 			v, _, err := r.transformations[i].Function(value)
-			if err != nil {
+			switch {
+			case err != nil:
 				errs = append(errs, err)
-			} else {
+			default:
 				value = v
 			}
 
@@ -580,14 +607,17 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 	if r == nil {
 		return fmt.Errorf("cannot add a variable to an undefined rule")
 	}
+
 	var re *regexp.Regexp
 	if isRegex, rx := hasRegex(key); isRegex {
 		if !caseSensitiveVariable(v) {
 			rx = strings.ToLower(rx)
 		}
-		if vare, err := r.memoizeDo(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
+
+		switch vare, err := r.memoizeDo(rx, func() (any, error) { return regexp.Compile(rx) }); {
+		case err != nil:
 			return err
-		} else {
+		default:
 			re = vare.(*regexp.Regexp)
 		}
 	}
@@ -599,6 +629,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 			r.variables = append(r.variables, newRuleVariableParams(variables.ArgsPost, key, re, iscount))
 			return nil
 		}
+
 		// Splitting ArgsNames variable into ArgsGetNames and ArgsPostNames
 		if v == variables.ArgsNames {
 			r.variables = append(r.variables, newRuleVariableParams(variables.ArgsGetNames, key, re, iscount))
@@ -606,6 +637,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 			return nil
 		}
 	}
+
 	r.variables = append(r.variables, newRuleVariableParams(v, key, re, iscount))
 	return nil
 }
@@ -632,16 +664,20 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 		if !caseSensitiveVariable(v) {
 			rx = strings.ToLower(rx)
 		}
-		if vare, err := r.memoizeDo(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
+
+		switch vare, err := r.memoizeDo(rx, func() (any, error) { return regexp.Compile(rx) }); {
+		case err != nil:
 			return err
-		} else {
+		default:
 			re = vare.(*regexp.Regexp)
 		}
 	}
+
 	// Prevent sigsev
 	if r == nil {
 		return fmt.Errorf("cannot create a variable exception for an undefined rule")
 	}
+
 	for i, rv := range r.variables {
 		// Even when Args and ArgsNames are one map, the exceptions must be created for the individual maps the
 		// Concat Map contains in order for exceptions to apply in the corresponding phase.
@@ -650,11 +686,13 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 			r.variables[i] = rv
 			continue
 		}
+
 		if rv.Variable == v {
 			rv.Exceptions = append(rv.Exceptions, ruleVariableException{key, re})
 			r.variables[i] = rv
 		}
 	}
+
 	return nil
 }
 

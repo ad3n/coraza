@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/debuglog"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 func TestInvalidRule(t *testing.T) {
@@ -561,14 +561,17 @@ func TestParseActions(t *testing.T) {
 			rp.options.WAF.Logger = debuglog.Default().WithLevel(debuglog.LevelWarn).WithOutput(logsBuf)
 
 			err := rp.ParseActions(tt.inputActions)
-			if tt.expectError && err == nil {
+			switch {
+			case tt.expectError && err == nil:
 				t.Errorf("expected error")
-			} else if !tt.expectError && err != nil {
+			case !tt.expectError && err != nil:
 				t.Errorf("unexpected error: %s", err.Error())
 			}
+
 			if tt.expectedLogLine == "" && logsBuf.Len() > 0 {
 				t.Errorf("expected empty warn debug log, got %q", logsBuf.String())
 			}
+
 			if tt.expectedLogLine != "" && !strings.Contains(logsBuf.String(), tt.expectedLogLine) {
 				t.Errorf("expected debug log containing %q, got %q", tt.expectedLogLine, logsBuf.String())
 			}

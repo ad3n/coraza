@@ -6,9 +6,9 @@ package experimental_test
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/experimental"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3"
+	"github.com/ad3n/coraza/v3/experimental"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 func TestRuleObserver(t *testing.T) {

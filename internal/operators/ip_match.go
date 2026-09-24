@@ -9,7 +9,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
 )
 
 // Description:
@@ -46,19 +46,24 @@ func newIPMatch(options plugintypes.OperatorOptions) (plugintypes.Operator, erro
 		if sb == "" {
 			continue
 		}
-		if strings.Contains(sb, ":") && !strings.Contains(sb, "/") {
+
+		switch {
+		case strings.Contains(sb, ":") && !strings.Contains(sb, "/"):
 			// ipv6
 			sb += "/128"
-		} else if strings.Contains(sb, ".") && !strings.Contains(sb, "/") {
+		case strings.Contains(sb, ".") && !strings.Contains(sb, "/"):
 			// ipv4
 			sb += "/32"
 		}
+
 		_, subnet, err := net.ParseCIDR(sb)
 		if err != nil {
 			continue
 		}
+
 		subnets = append(subnets, *subnet)
 	}
+
 	return &ipMatch{subnets: subnets}, nil
 }
 

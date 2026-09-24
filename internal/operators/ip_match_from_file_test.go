@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/io"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/internal/io"
 )
 
 func TestFromFile(t *testing.T) {

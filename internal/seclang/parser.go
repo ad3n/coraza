@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/environment"
-	"github.com/corazawaf/coraza/v3/internal/io"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/internal/environment"
+	"github.com/ad3n/coraza/v3/internal/io"
 )
 
 // maxIncludeRecursion is used to avoid DDOS by including files that include
@@ -41,7 +41,8 @@ func (p *Parser) FromFile(profilePath string) error {
 
 	var files []string
 	isGlob := strings.Contains(profilePath, "*")
-	if isGlob {
+	switch {
+	case isGlob:
 		var err error
 		files, err = fs.Glob(p.root, profilePath)
 		if err != nil {
@@ -51,7 +52,7 @@ func (p *Parser) FromFile(profilePath string) error {
 		if len(files) == 0 {
 			p.options.WAF.Logger.Warn().Int("line", p.currentLine).Msg("empty glob result")
 		}
-	} else {
+	default:
 		files = append(files, profilePath)
 	}
 
@@ -66,6 +67,7 @@ func (p *Parser) FromFile(profilePath string) error {
 		if !isGlob && !strings.HasPrefix(profilePath, "/") {
 			profilePath = filepath.Join(p.currentDir, profilePath)
 		}
+
 		p.currentFile = profilePath
 		lastDir := p.currentDir
 		p.currentDir = filepath.Dir(profilePath)
@@ -84,9 +86,11 @@ func (p *Parser) FromFile(profilePath string) error {
 			p.currentFile = ""
 			return fmt.Errorf("failed to parse string: %s", err.Error())
 		}
+
 		// restore the lastDir post processing all includes
 		p.currentDir = lastDir
 	}
+
 	// we don't use defer for this as tinygo does not seem to like it
 	p.currentDir = originalDir
 	p.currentFile = ""
@@ -116,6 +120,7 @@ func (p *Parser) parseString(data string) error {
 		if lineLen == 0 {
 			continue
 		}
+
 		// As a first step, the parser has to ignore all the comments (lines starting with "#") in any circumstances.
 		if line[0] == '#' {
 			continue
@@ -123,9 +128,10 @@ func (p *Parser) parseString(data string) error {
 
 		// Looks for a line like "SecDataset test `". The backtick starts an action list.
 		// The list will be closed only with a single "`" line.
-		if !inBackticks && line[lineLen-1] == '`' {
+		switch {
+		case !inBackticks && line[lineLen-1] == '`':
 			inBackticks = true
-		} else if inBackticks && line[0] == '`' {
+		case inBackticks && line[0] == '`':
 			inBackticks = false
 		}
 
@@ -136,20 +142,24 @@ func (p *Parser) parseString(data string) error {
 		}
 
 		// Check if line ends with \
-		if line[lineLen-1] == '\\' {
+		switch {
+		case line[lineLen-1] == '\\':
 			linebuffer.WriteString(strings.TrimSuffix(line, "\\"))
-		} else {
+		default:
 			linebuffer.WriteString(line)
 			err := p.evaluateLine(linebuffer.String())
 			if err != nil {
 				return err
 			}
+
 			linebuffer.Reset()
 		}
 	}
+
 	if inBackticks {
 		return errors.New("backticks left open")
 	}
+
 	return nil
 }
 

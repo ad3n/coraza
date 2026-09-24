@@ -8,7 +8,7 @@ package operators
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
 )
 
 // Test that in TinyGo builds, validateSchema falls back to an unconditional match operator.

@@ -17,7 +17,7 @@ test/crs
 vendor/
 coraza-waf
 __debug_bin
-
+docs/
 build/
 
 go.work.sum

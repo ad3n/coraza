@@ -6,7 +6,7 @@ package actions
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
 )
 
 func TestLogDataInit(t *testing.T) {
@@ -22,9 +22,10 @@ func TestLogDataInit(t *testing.T) {
 			action := logdata()
 			r := &corazawaf.Rule{}
 			err := action.Init(r, test.data)
-			if test.expectError && err == nil {
+			switch {
+			case test.expectError && err == nil:
 				t.Errorf("expected error")
-			} else if !test.expectError && err != nil {
+			case !test.expectError && err != nil:
 				t.Errorf("unexpected error: %s", err.Error())
 			}
 		})

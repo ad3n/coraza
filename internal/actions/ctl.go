@@ -10,13 +10,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/collections"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/ad3n/coraza/v3/debuglog"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/internal/collections"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
+	utils "github.com/ad3n/coraza/v3/internal/strings"
+	"github.com/ad3n/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/types/variables"
 )
 
 type ctlFunctionType int
@@ -159,6 +159,7 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 				Msg("Invalid range")
 			return
 		}
+
 		for _, r := range tx.WAF.Rules.GetRules() {
 			if r.ID_ >= start && r.ID_ <= end {
 				tx.RemoveRuleTargetByID(r.ID_, a.collection, a.colKey, a.colKeyRx)
@@ -188,6 +189,7 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 				Msg("Invalid status")
 			return
 		}
+
 		tx.AuditEngine = ae
 	case ctlAuditLogParts:
 		AuditLogParts, err := types.ApplyAuditLogParts(tx.AuditLogParts, a.value)
@@ -199,6 +201,7 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 				Msg("Invalid audit log part")
 			return
 		}
+
 		tx.AuditLogParts = AuditLogParts
 	case ctlForceRequestBodyVariable:
 		val, ok := parseOnOff(a.value)
@@ -209,13 +212,15 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 				Msg("Unknown toggle")
 			return
 		}
+
 		tx.ForceRequestBodyVariable = val
 		tx.DebugLogger().Debug().
 			Str("ctl", "ForceRequestBodyVariable").
 			Bool("value", val).
 			Msg("Forcing request body var")
 	case ctlRequestBodyAccess:
-		if tx.LastPhase() <= types.PhaseRequestHeaders {
+		switch {
+		case tx.LastPhase() <= types.PhaseRequestHeaders:
 
 			val, ok := parseOnOff(a.value)
 			if !ok {
@@ -225,15 +230,17 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 					Msg("Unknown toggle")
 				return
 			}
+
 			tx.RequestBodyAccess = val
-		} else {
+		default:
 			tx.DebugLogger().Warn().
 				Str("ctl", "RequestBodyAccess").
 				Msg("Cannot change request body access after request headers phase")
 			return
 		}
 	case ctlRequestBodyLimit:
-		if tx.LastPhase() <= types.PhaseRequestHeaders {
+		switch {
+		case tx.LastPhase() <= types.PhaseRequestHeaders:
 			limit, err := strconv.ParseInt(a.value, 10, 64)
 			if err != nil {
 				tx.DebugLogger().Error().
@@ -243,17 +250,19 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 					Msg("Invalid limit")
 				return
 			}
+
 			tx.RequestBodyLimit = limit
-		} else {
+		default:
 			tx.DebugLogger().Warn().
 				Str("ctl", "RequestBodyLimit").
 				Msg("Cannot change request body limit after request headers phase")
 			return
 		}
 	case ctlRequestBodyProcessor:
-		if tx.LastPhase() <= types.PhaseRequestHeaders {
+		switch {
+		case tx.LastPhase() <= types.PhaseRequestHeaders:
 			tx.Variables().RequestBodyProcessor().(*collections.Single).Set(strings.ToUpper(a.value))
-		} else {
+		default:
 			tx.DebugLogger().Warn().
 				Str("ctl", "RequestBodyProcessor").
 				Msg("Cannot change request body processor after request headers phase")
@@ -268,9 +277,11 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 				Msg("Invalid status")
 			return
 		}
+
 		tx.RuleEngine = re
 	case ctlRuleRemoveByID:
-		if idx := strings.Index(a.value, "-"); idx == -1 {
+		switch idx := strings.Index(a.value, "-"); {
+		case idx == -1:
 			id, err := strconv.Atoi(a.value)
 			if err != nil {
 				tx.DebugLogger().Error().
@@ -282,7 +293,7 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 			}
 
 			tx.RemoveRuleByID(id)
-		} else {
+		default:
 			start, end, err := parseRange(a.value)
 			if err != nil {
 				tx.DebugLogger().Error().
@@ -291,6 +302,7 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 					Msg("Invalid range")
 				return
 			}
+
 			tx.RemoveRuleByIDRange(start, end)
 		}
 	case ctlRuleRemoveByMsg:
@@ -309,7 +321,8 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 		}
 
 	case ctlResponseBodyAccess:
-		if tx.LastPhase() <= types.PhaseResponseHeaders {
+		switch {
+		case tx.LastPhase() <= types.PhaseResponseHeaders:
 			val, ok := parseOnOff(a.value)
 			if !ok {
 				tx.DebugLogger().Error().
@@ -318,8 +331,9 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 					Msg("Unknown toggle")
 				return
 			}
+
 			tx.ResponseBodyAccess = val
-		} else {
+		default:
 			tx.DebugLogger().Warn().
 				Str("ctl", "ResponseBodyAccess").
 				Msg("Cannot change response body access after response headers phase")
@@ -327,7 +341,8 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 		}
 
 	case ctlResponseBodyLimit:
-		if tx.LastPhase() <= types.PhaseResponseHeaders {
+		switch {
+		case tx.LastPhase() <= types.PhaseResponseHeaders:
 			limit, err := strconv.ParseInt(a.value, 10, 64)
 			if err != nil {
 				tx.DebugLogger().Error().
@@ -337,8 +352,9 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 					Msg("Invalid limit")
 				return
 			}
+
 			tx.ResponseBodyLimit = limit
-		} else {
+		default:
 			tx.DebugLogger().Warn().
 				Str("ctl", "ResponseBodyLimit").
 				Msg("Cannot change response body access after response headers phase")
@@ -354,20 +370,22 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 				Msg("Unknown toggle")
 			return
 		}
+
 		tx.ForceResponseBodyVariable = val
 		tx.WAF.Logger.Debug().
 			Str("ctl", "ForceResponseBodyVariable").
 			Bool("value", val).
 			Msg("Forcing response body var")
 	case ctlResponseBodyProcessor:
-		if tx.LastPhase() <= types.PhaseResponseHeaders {
+		switch {
+		case tx.LastPhase() <= types.PhaseResponseHeaders:
 			// We are still in time to set the response body processor
 			// TODO(jcchavezs): Who should hold this knowledge?
 			// TODO(jcchavezs): Shall we validate such body processor exists or is it
 			// too ambitious as plugins might register their own at some point in the
 			// lifecycle which does not have to happen before this.
 			tx.Variables().ResponseBodyProcessor().(*collections.Single).Set(strings.ToUpper(a.value))
-		} else {
+		default:
 			tx.DebugLogger().Warn().
 				Str("ctl", "ResponseBodyLimit").
 				Msg("Cannot change response body access after response headers phase")
@@ -401,35 +419,43 @@ func parseCtl(data string, memoizer plugintypes.Memoizer) (ctlFunctionType, stri
 	if !ok {
 		return ctlUnknown, "", 0, "", nil, errors.New("invalid syntax")
 	}
+
 	value, col, ok := strings.Cut(ctlVal, ";")
 	var colkey, colname string
 	if ok {
 		colname, colkey, _ = strings.Cut(col, ":")
 		colkey = strings.TrimSpace(colkey)
 	}
+
 	collection, _ := variables.Parse(strings.TrimSpace(colname))
 	var keyRx *regexp.Regexp
-	if isRegex, rxPattern := utils.HasRegex(colkey); isRegex {
+	switch isRegex, rxPattern := utils.HasRegex(colkey); {
+	case isRegex:
 		if len(rxPattern) == 0 {
 			return ctlUnknown, "", 0, "", nil, errors.New("empty regex pattern in ctl collection key")
 		}
+
 		var err error
-		if memoizer != nil {
+		switch {
+		case memoizer != nil:
 			re, compileErr := memoizer.Do(rxPattern, func() (any, error) { return regexp.Compile(rxPattern) })
 			if compileErr != nil {
 				return ctlUnknown, "", 0, "", nil, fmt.Errorf("invalid regex in ctl collection key: %w", compileErr)
 			}
+
 			keyRx = re.(*regexp.Regexp)
-		} else {
+		default:
 			keyRx, err = regexp.Compile(rxPattern)
 			if err != nil {
 				return ctlUnknown, "", 0, "", nil, fmt.Errorf("invalid regex in ctl collection key: %w", err)
 			}
 		}
+
 		colkey = ""
-	} else {
+	default:
 		colkey = strings.ToLower(colkey)
 	}
+
 	var act ctlFunctionType
 	switch action {
 	case "auditEngine":
@@ -475,6 +501,7 @@ func parseCtl(data string, memoizer plugintypes.Memoizer) (ctlFunctionType, stri
 	default:
 		return ctlUnknown, "", 0x00, "", nil, fmt.Errorf("unknown ctl action %q", action)
 	}
+
 	return act, value, collection, colkey, keyRx, nil
 }
 

@@ -14,12 +14,12 @@ import (
 	"strings"
 	"testing"
 
+	coreruleset "github.com/corazawaf/coraza-coreruleset"
 	"github.com/jcchavezs/mergefs"
 	"github.com/jcchavezs/mergefs/io"
 
-	coreruleset "github.com/corazawaf/coraza-coreruleset"
-	"github.com/corazawaf/coraza/v3/debuglog"
-	coraza "github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/debuglog"
+	coraza "github.com/ad3n/coraza/v3/internal/corazawaf"
 )
 
 //go:embed testdata

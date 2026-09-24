@@ -4,7 +4,7 @@
 package transformations
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/ad3n/coraza/v3/internal/strings"
 )
 
 func urlDecode(data string) (string, bool, error) {
@@ -24,40 +24,45 @@ func doURLDecode(input string, d []byte, pos int) string {
 	c := pos
 
 	for i < inputLen {
-		if input[i] == '%' {
+		switch {
+		case input[i] == '%':
 			/* Character is a percent sign. */
 
 			/* Are there enough bytes available? */
-			if i+2 < inputLen {
+			switch {
+			case i+2 < inputLen:
 				c1 := input[i+1]
 				c2 := input[i+2]
-				if strings.ValidHex(c1) && strings.ValidHex(c2) {
+				switch {
+				case strings.ValidHex(c1) && strings.ValidHex(c2):
 					uni := strings.X2c(input[i+1:])
 
 					d[c] = uni
 					c++
 					i += 3
-				} else {
+				default:
 					/* Not a valid encoding, skip this % */
 					d[c] = input[i]
 					c++
 					i++
 				}
-			} else {
+			default:
 				/* Not enough bytes available, copy the raw bytes. */
 				d[c] = input[i]
 				c++
 				i++
 			}
-		} else {
+		default:
 			/* Character is not a percent sign. */
-			if input[i] == '+' {
+			switch {
+			case input[i] == '+':
 				d[c] = ' '
 				c++
-			} else {
+			default:
 				d[c] = input[i]
 				c++
 			}
+
 			i++
 		}
 	}

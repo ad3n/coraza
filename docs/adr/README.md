@@ -124,4 +124,6 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0055](0055-accuracy-rule-action.md) | [#1693](https://github.com/corazawaf/coraza/pull/1693) | 2026-08-27 | unreleased | P | `accuracy` metadata action |
 | [0056](0056-fips-140-3-support.md) | [#1678](https://github.com/corazawaf/coraza/pull/1678) | 2026-08-28 | unreleased | F | Runtime FIPS 140-3 support for `t:md5`/`t:sha1` |
 
+| [0057](0057-fork-module-identity.md) | Not opened | Pending | unreleased (post-v3.7.0) | R | Fork module identity and JSON dependency |
+
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor

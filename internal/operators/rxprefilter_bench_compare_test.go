@@ -1,3 +1,6 @@
+// Copyright 2026 Juan Pablo Tosso and the OWASP Coraza contributors
+// SPDX-License-Identifier: Apache-2.0
+
 //go:build coraza.rule.rx_prefilter
 
 // bench_compare_test.go: apples-to-apples benchmark against main.
@@ -110,7 +113,6 @@ var bcRequests = []benchRequest{
 
 func BenchmarkCompare(b *testing.B) {
 	for _, pat := range bcPatterns {
-		pat := pat
 		re := regexp.MustCompile(pat.pattern)
 		pf := prefilterFunc(pat.pattern)
 		hasPF := pf != nil
@@ -119,7 +121,6 @@ func BenchmarkCompare(b *testing.B) {
 		}
 
 		for _, req := range bcRequests {
-			req := req
 			name := pat.name + "/" + req.name
 
 			// regex-only: always run the full regex
@@ -147,4 +148,3 @@ func BenchmarkCompare(b *testing.B) {
 		b.Log(pat.name, "→ prefilter:", hasPF)
 	}
 }
-

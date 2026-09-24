@@ -9,7 +9,7 @@
 [![codecov](https://codecov.io/gh/corazawaf/coraza/branch/main/graph/badge.svg?token=6570804ZC7)](https://codecov.io/gh/corazawaf/coraza)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![OWASP Production Project](https://img.shields.io/badge/owasp-production%20project-brightgreen)](https://owasp.org/www-project-coraza-web-application-firewall)
-[![GoDoc](https://godoc.org/github.com/corazawaf/coraza?status.svg)](https://godoc.org/github.com/corazawaf/coraza/v3)
+[![GoDoc](https://godoc.org/github.com/corazawaf/coraza?status.svg)](https://godoc.org/github.com/ad3n/coraza/v3)
 
 Coraza is an open source, enterprise-grade, high performance Web Application Firewall (WAF) ready to protect your beloved applications. It is written in Go, supports ModSecurity SecLang rulesets and is 100% compatible with the OWASP Core Rule Set v4.
 
@@ -49,8 +49,18 @@ The Coraza Project maintains implementations and plugins for the following serve
 
 ## Prerequisites
 
-* Recent Go version (see [go.mod](./go.mod)) or tinygo compiler.
+* Go 1.26 or newer (see [go.mod](./go.mod)), or TinyGo 0.41.1 or newer with Go 1.26. The `github.com/ad3n/gjson` dependency requires Go 1.26.
 * Linux distribution (Debian or Centos recommended), Windows or Mac.
+
+## Fork module
+
+This fork uses `github.com/ad3n/coraza/v3` and `github.com/ad3n/gjson v1.0.0`.
+Update application and plugin imports together: Go treats types from the upstream
+and fork module paths as different types. The Go package name remains `coraza`.
+Historical upstream links are retained for attribution.
+
+See the [performance scan](docs/performance-scan.md) for allocation measurements
+and optimization candidates.
 
 ## Coraza Core Usage
 
@@ -62,7 +72,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/ad3n/coraza/v3"
 )
 
 func main() {
@@ -133,13 +143,13 @@ Review any rule depending on these before deploying in FIPS mode.
 It can be used standalone against your own waf deployment:
 
 ```shell
-go run github.com/corazawaf/coraza/v3/http/e2e/cmd/httpe2e@main --proxy-hostport localhost:8080 --httpbin-hostport localhost:8081
+go run github.com/ad3n/coraza/v3/http/e2e/cmd/httpe2e@main --proxy-hostport localhost:8080 --httpbin-hostport localhost:8081
 ```
 
 or as a library by importing:
 
 ```go
-"github.com/corazawaf/coraza/v3/http/e2e"
+"github.com/ad3n/coraza/v3/http/e2e"
 ```
 
 As a reference for library usage, see [`testing/e2e/e2e_test.go`](./testing/e2e/e2e_test.go).

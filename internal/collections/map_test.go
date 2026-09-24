@@ -18,7 +18,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/ad3n/coraza/v3/types/variables"
 )
 
 // Case Insensitive Map
@@ -185,7 +185,7 @@ func TestFindAllEmptyMap(t *testing.T) {
 func BenchmarkFindAll(b *testing.B) {
 	b.ReportAllocs()
 	m := NewMap(variables.RequestHeaders)
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		m.Add(fmt.Sprintf("x-header-%d", i), fmt.Sprintf("value-%d", i))
 	}
 	b.ResetTimer()
@@ -197,7 +197,7 @@ func BenchmarkFindAll(b *testing.B) {
 func BenchmarkFindRegex(b *testing.B) {
 	b.ReportAllocs()
 	m := NewMap(variables.RequestHeaders)
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		m.Add(fmt.Sprintf("x-header-%d", i), fmt.Sprintf("value-%d", i))
 	}
 	// Matches keys ending in 0-9 (x-header-0 .. x-header-9), roughly half.
@@ -212,7 +212,7 @@ func BenchmarkFindString(b *testing.B) {
 	b.ReportAllocs()
 	m := NewMap(variables.RequestHeaders)
 	// Single key with multiple values
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		m.Add("x-forwarded-for", fmt.Sprintf("10.0.0.%d", i))
 	}
 	b.ResetTimer()

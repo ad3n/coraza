@@ -5,6 +5,7 @@ package strings
 
 import (
 	"math/rand/v2"
+	"slices"
 	"strings"
 	"unsafe"
 )
@@ -43,15 +44,18 @@ func ValidHex(x byte) bool {
 // X2c converts a hex character to its ascii value
 func X2c(what string) byte {
 	var digit byte
-	if what[0] >= 'A' {
+	switch {
+	case what[0] >= 'A':
 		digit = ((what[0] & 0xdf) - 'A') + 10
-	} else {
+	default:
 		digit = what[0] - '0'
 	}
+
 	digit *= 16
-	if what[1] >= 'A' {
+	switch {
+	case what[1] >= 'A':
 		digit += ((what[1] & 0xdf) - 'A') + 10
-	} else {
+	default:
 		digit += what[1] - '0'
 	}
 
@@ -105,12 +109,7 @@ func UnescapeQuotedString(s string) string {
 
 // InSlice returns true if the string is in the slice
 func InSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, a)
 }
 
 // WrapUnsafe wraps the provided buffer as a string. The buffer

@@ -16,14 +16,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/auditlog"
-	"github.com/corazawaf/coraza/v3/internal/environment"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
-	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/internal/sync"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/debuglog"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/internal/auditlog"
+	"github.com/ad3n/coraza/v3/internal/environment"
+	"github.com/ad3n/coraza/v3/internal/memoize"
+	stringutils "github.com/ad3n/coraza/v3/internal/strings"
+	"github.com/ad3n/coraza/v3/internal/sync"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 var wafIDCounter atomic.Uint64
@@ -460,11 +460,12 @@ func (w *WAF) Validate() error {
 		return errors.New("request body json depth limit should be bigger than 0")
 	}
 
-	if environment.HasAccessToFS {
+	switch {
+	case environment.HasAccessToFS:
 		if w.UploadKeepFiles != types.UploadKeepFilesOff && w.UploadDir == "" {
 			return errors.New("SecUploadDir is required when SecUploadKeepFiles is enabled")
 		}
-	} else {
+	default:
 		if w.UploadKeepFiles != types.UploadKeepFilesOff {
 			return errors.New("SecUploadKeepFiles requires filesystem access, which is not available in this build")
 		}

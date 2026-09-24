@@ -8,9 +8,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 // wafWithRules mirrors experimental.WAFWithRules for testing without import cycle.
@@ -56,11 +56,12 @@ func TestRequestBodyLimit(t *testing.T) {
 			cfg.requestBodyInMemoryLimit = &tCase.inMemoryLimit
 
 			_, err := NewWAF(cfg)
-			if tCase.expectedErr == nil {
+			switch {
+			case tCase.expectedErr == nil:
 				if err != nil {
 					t.Fatalf("unexpected error: %s", err.Error())
 				}
-			} else {
+			default:
 				if err == nil {
 					t.Fatal("expected error")
 				}
@@ -97,11 +98,12 @@ func TestResponseBodyLimit(t *testing.T) {
 			cfg.responseBodyLimit = &tCase.limit
 
 			_, err := NewWAF(cfg)
-			if tCase.expectedErr == nil {
+			switch {
+			case tCase.expectedErr == nil:
 				if err != nil {
 					t.Fatalf("unexpected error: %s", err.Error())
 				}
-			} else {
+			default:
 				if err == nil {
 					t.Fatal("expected error")
 				}

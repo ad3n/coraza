@@ -10,11 +10,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tidwall/gjson"
+	"github.com/ad3n/gjson"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
+	utils "github.com/ad3n/coraza/v3/internal/strings"
 )
 
 type Test struct {
@@ -39,8 +39,10 @@ func TestOperators(t *testing.T) {
 			if err != nil {
 				return err
 			}
+
 			files = append(files, data)
 		}
+
 		return nil
 	}); err != nil {
 		t.Fatalf("failed to walk test files: %s", err.Error())
@@ -66,6 +68,7 @@ func TestOperators(t *testing.T) {
 			if utils.InSlice("containsWord", notImplemented) {
 				continue
 			}
+
 			for capName, capVal := range captureMatrix {
 				t.Run(data.Name+" "+capName, func(t *testing.T) {
 					// UNMARSHALL does not transform \u0000 to binary
@@ -74,9 +77,10 @@ func TestOperators(t *testing.T) {
 
 					if strings.Contains(data.Input, `\x`) {
 						in, err := strconv.Unquote(`"` + data.Input + `"`)
-						if err != nil {
+						switch {
+						case err != nil:
 							t.Errorf("Cannot parse test case: %s", err.Error())
-						} else {
+						default:
 							data.Input = in
 						}
 					}
@@ -86,6 +90,7 @@ func TestOperators(t *testing.T) {
 						if err != nil {
 							t.Errorf("Cannot parse test case: %s", err.Error())
 						}
+
 						data.Param = p
 					}
 
@@ -99,6 +104,7 @@ func TestOperators(t *testing.T) {
 						t.Error(err)
 						return
 					}
+
 					tx := waf.NewTransaction()
 					tx.Capture = capVal
 					res := op.Evaluate(tx, data.Input)
@@ -109,6 +115,7 @@ func TestOperators(t *testing.T) {
 						if data.Ret == 0 {
 							expected = "no match"
 						}
+
 						t.Errorf("Invalid operator result for @%s(%q, %q), %s expected", data.Name, data.Param, data.Input, expected)
 					}
 				})

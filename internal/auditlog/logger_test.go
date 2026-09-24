@@ -9,15 +9,16 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
 )
 
 func TestDefaultWriters(t *testing.T) {
 	ws := []string{"serial", "concurrent"}
 	for _, writer := range ws {
-		if w, err := GetWriter(writer); err != nil {
+		switch w, err := GetWriter(writer); {
+		case err != nil:
 			t.Error(err)
-		} else if w == nil {
+		case w == nil:
 			t.Errorf("invalid %s writer", writer)
 		}
 	}

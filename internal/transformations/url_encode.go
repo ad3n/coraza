@@ -15,6 +15,7 @@ func doURLEncode(input string) (string, bool) {
 	if inputLen == 0 {
 		return "", false
 	}
+
 	changed := false
 	leng := inputLen * 3
 	var d strings.Builder
@@ -26,13 +27,15 @@ func doURLEncode(input string) (string, bool) {
 	for i := range inputLen {
 		cc := input[i]
 
-		if cc == ' ' {
+		switch {
+		case cc == ' ':
 			d.WriteByte('+')
 			changed = true
-		} else {
-			if (cc == 42) || ((cc >= 48) && (cc <= 57)) || ((cc >= 65) && (cc <= 90)) || ((cc >= 97) && (cc <= 122)) {
+		default:
+			switch {
+			case (cc == 42) || ((cc >= 48) && (cc <= 57)) || ((cc >= 65) && (cc <= 90)) || ((cc >= 97) && (cc <= 122)):
 				d.WriteByte(cc)
-			} else {
+			default:
 				d.Write([]byte{'%', c2xTable[(cc&0xff)>>4], c2xTable[(cc&0xff)&0x0f]})
 				changed = true
 			}

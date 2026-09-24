@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/corazawaf/coraza/v3/http/e2e"
+	"github.com/ad3n/coraza/v3/http/e2e"
 )
 
 // Flags:

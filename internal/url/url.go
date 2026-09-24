@@ -17,24 +17,30 @@ func doParseQuery(query string, separator byte, urlUnescape bool) map[string][]s
 	m := make(map[string][]string)
 	for query != "" {
 		key := query
-		if i := strings.IndexByte(key, separator); i >= 0 {
+		switch i := strings.IndexByte(key, separator); {
+		case i >= 0:
 			key, query = key[:i], key[i+1:]
-		} else {
+		default:
 			query = ""
 		}
+
 		if key == "" {
 			continue
 		}
+
 		value := ""
 		if i := strings.IndexByte(key, '='); i >= 0 {
 			key, value = key[:i], key[i+1:]
 		}
+
 		if urlUnescape {
 			key = queryUnescape(key)
 			value = queryUnescape(value)
 		}
+
 		m[key] = append(m[key], value)
 	}
+
 	return m
 }
 

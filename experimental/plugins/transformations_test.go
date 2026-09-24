@@ -6,8 +6,8 @@ package plugins_test
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins"
-	"github.com/corazawaf/coraza/v3/internal/transformations"
+	"github.com/ad3n/coraza/v3/experimental/plugins"
+	"github.com/ad3n/coraza/v3/internal/transformations"
 )
 
 func TestTransformation(t *testing.T) {

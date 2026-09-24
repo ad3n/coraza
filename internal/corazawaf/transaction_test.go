@@ -17,18 +17,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/collections"
-	"github.com/corazawaf/coraza/v3/internal/corazarules"
-	"github.com/corazawaf/coraza/v3/internal/environment"
-	"github.com/corazawaf/coraza/v3/internal/operators"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/internal/transformations"
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/ad3n/coraza/v3/collection"
+	"github.com/ad3n/coraza/v3/debuglog"
+	"github.com/ad3n/coraza/v3/experimental/plugins/macro"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/internal/collections"
+	"github.com/ad3n/coraza/v3/internal/corazarules"
+	"github.com/ad3n/coraza/v3/internal/environment"
+	"github.com/ad3n/coraza/v3/internal/operators"
+	utils "github.com/ad3n/coraza/v3/internal/strings"
+	"github.com/ad3n/coraza/v3/internal/transformations"
+	"github.com/ad3n/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/types/variables"
 )
 
 func TestTxSettersMultipart(t *testing.T) {
@@ -246,6 +246,7 @@ func TestWriteRequestBody(t *testing.T) {
 							if !testCase.avoidRequestBodyLimitActionInit {
 								waf.RequestBodyLimitAction = testCase.requestBodyLimitAction
 							}
+
 							tx := waf.NewTransaction()
 							tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
 
@@ -261,14 +262,17 @@ func TestWriteRequestBody(t *testing.T) {
 									t.Fatalf("Failed to write body buffer: %s", err.Error())
 								}
 							}
+
 							if testCase.limitReached && tx.variables.inboundDataError.Get() != "1" {
 								t.Fatalf("Expected INBOUND_DATA_ERROR to be set")
 							}
-							if testCase.shouldInterrupt {
+
+							switch {
+							case testCase.shouldInterrupt:
 								if it == nil {
 									t.Fatal("Expected interruption, got nil")
 								}
-							} else {
+							default:
 								it, err := tx.ProcessRequestBody()
 								if err != nil {
 									t.Fatal(err)
@@ -667,14 +671,17 @@ func TestWriteResponseBody(t *testing.T) {
 									t.Fatalf("Failed to write body buffer: %s", err.Error())
 								}
 							}
+
 							if testCase.limitReached && tx.variables.outboundDataError.Get() != "1" {
 								t.Fatalf("Expected OUTBOUND_DATA_ERROR to be set")
 							}
-							if testCase.shouldInterrupt {
+
+							switch {
+							case testCase.shouldInterrupt:
 								if it == nil {
 									t.Fatal("Expected interruption, got nil")
 								}
-							} else {
+							default:
 								it, err := tx.ProcessResponseBody()
 								if err != nil {
 									t.Fatal(err)
@@ -683,6 +690,7 @@ func TestWriteResponseBody(t *testing.T) {
 								if it != nil {
 									t.Fatalf("Unexpected interruption")
 								}
+
 								// checking if the body has been populated up to the first POST arg
 								index := strings.Index(urlencodedBody, "&")
 								if tx.variables.responseBody.Get()[:index] != urlencodedBody[:index] {
@@ -1255,11 +1263,12 @@ func TestLogCallback(t *testing.T) {
 			tx.WAF.Rules.rules = append(tx.WAF.Rules.rules, *rule)
 
 			it := tx.ProcessRequestHeaders()
-			if testCase.shouldInterrupt {
+			switch {
+			case testCase.shouldInterrupt:
 				if it == nil {
 					t.Fatal("Expected interruption on headers with disruptive action")
 				}
-			} else {
+			default:
 				if it != nil {
 					t.Fatal("Unexpected interruption on headers without disruptive action")
 				}
@@ -1268,6 +1277,7 @@ func TestLogCallback(t *testing.T) {
 			if buffer == "" || !strings.Contains(buffer, tx.id) {
 				t.Fatal("failed to call error log callback")
 			}
+
 			if !strings.Contains(buffer, testCase.expectedLogLine) {
 				t.Fatalf("Expected string \"%s\" with disruptive rule, got %s", testCase.expectedLogLine, buffer)
 
@@ -1311,21 +1321,26 @@ func TestCookiesNotUrldecoded(t *testing.T) {
 	tx.AddRequestHeader("cookie", fullCookie)
 	c := tx.variables.requestCookies.Get("abc")[0]
 	if c != expectedUrlencodedAbcCookieValue {
-		if c == unexpectedUrldencodedAbcCookieValue {
+		switch {
+		case c == unexpectedUrldencodedAbcCookieValue:
 			t.Errorf("failed to set cookie, unexpected urldecoding. Got: %q, expected: %q", unexpectedUrldencodedAbcCookieValue, expectedUrlencodedAbcCookieValue)
-		} else {
+		default:
 			t.Errorf("failed to set cookie, got %q", c)
 		}
 	}
+
 	if tx.variables.requestHeaders.Get("cookie")[0] != fullCookie {
 		t.Errorf("failed to set request header, got: %q, expected: %q", tx.variables.requestHeaders.Get("cookie")[0], fullCookie)
 	}
+
 	if !utils.InSlice("cookie", collectionValues(t, tx.variables.requestHeadersNames)) {
 		t.Error("failed to set header name", collectionValues(t, tx.variables.requestHeadersNames))
 	}
+
 	if !utils.InSlice("abc", collectionValues(t, tx.variables.requestCookiesNames)) {
 		t.Error("failed to set cookie name")
 	}
+
 	if err := tx.Close(); err != nil {
 		t.Error(err)
 	}
@@ -1744,7 +1759,7 @@ func BenchmarkTxGetField(b *testing.B) {
 func makeTransactionWithJSONArgs(t testing.TB) *Transaction {
 	t.Helper()
 	tx := makeTransaction(t)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		tx.AddGetRequestArgument(fmt.Sprintf("json.%d.jobdescription", i), "value")
 	}
 	return tx

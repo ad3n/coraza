@@ -7,7 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	utils "github.com/ad3n/coraza/v3/internal/strings"
 )
 
 func cssDecode(data string) (string, bool, error) {
@@ -32,9 +32,11 @@ func cssDecodeInplace(input string, pos int) string {
 
 	for i < inputLen {
 		/* Is the character a backslash? */
-		if input[i] == '\\' {
+		switch {
+		case input[i] == '\\':
 			/* Is there at least one more byte? */
-			if i+1 < inputLen {
+			switch {
+			case i+1 < inputLen:
 				i++ /* We are not going to need the backslash. */
 
 				/* Check for 1-6 hex characters following the backslash */
@@ -96,13 +98,13 @@ func cssDecodeInplace(input string, pos int) string {
 					d = append(d, input[i])
 					i++
 				}
-			} else {
+			default:
 				/* No characters after backslash. */
 				/* Do not include backslash in output
 				 *(continuation to nothing) */
 				i++
 			}
-		} else {
+		default:
 			/* Character is not a backslash. */
 			/* Copy one normal character to output. */
 			d = append(d, input[i])
@@ -118,11 +120,13 @@ func cssDecodeInplace(input string, pos int) string {
  */
 func xsingle2c(what byte) byte {
 	var digit byte
-	if what >= 'A' {
+	switch {
+	case what >= 'A':
 		digit = ((what & 0xdf) - 'A') + 10
-	} else {
+	default:
 		digit = what - '0'
 	}
+
 	return digit
 }
 

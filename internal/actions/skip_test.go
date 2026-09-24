@@ -28,11 +28,12 @@ func TestSkipInit(t *testing.T) {
 		} {
 			a := skip()
 			err := a.Init(nil, test.data)
-			if test.expectedError {
+			switch {
+			case test.expectedError:
 				if err == nil {
 					t.Errorf("expected error: %s", err.Error())
 				}
-			} else {
+			default:
 				if err != nil {
 					t.Errorf("unexpected error: %s", err.Error())
 				}

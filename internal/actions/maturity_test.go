@@ -6,7 +6,7 @@ package actions
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
 )
 
 func TestMaturityInit(t *testing.T) {
@@ -25,11 +25,12 @@ func TestMaturityInit(t *testing.T) {
 		a := maturity()
 		r := &corazawaf.Rule{}
 		err := a.Init(r, test.data)
-		if test.expectedError {
+		switch {
+		case test.expectedError:
 			if err == nil {
 				t.Errorf("expected error")
 			}
-		} else {
+		default:
 			if err != nil {
 				t.Errorf("unexpected error: %s", err.Error())
 			}

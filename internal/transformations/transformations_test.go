@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tidwall/gjson"
+	"github.com/ad3n/gjson"
 )
 
 type Test struct {

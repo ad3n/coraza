@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/ad3n/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/types/variables"
 )
 
 // MatchData works like VariableKey but is used for logging,
@@ -245,14 +245,17 @@ func (mr MatchedRule) AuditLog() string {
 	log := &strings.Builder{}
 	for _, matchData := range mr.MatchedDatas_ {
 		fmt.Fprintf(log, "[client %q] ", mr.ClientIPAddress_)
-		if mr.Disruptive_ {
+		switch {
+		case mr.Disruptive_:
 			writeDisruptiveActionSpecificLog(log, mr)
-		} else {
+		default:
 			log.WriteString("Coraza: Warning. ")
 		}
+
 		mr.matchData(log, matchData)
 		mr.writeDetails(log, matchData)
 	}
+
 	return log.String()
 }
 
@@ -267,6 +270,7 @@ func (mr MatchedRule) ErrorLog() string {
 			break
 		}
 	}
+
 	if len(msg) > maxSizeLogMessage {
 		msg = msg[:maxSizeLogMessage]
 	}
@@ -274,11 +278,13 @@ func (mr MatchedRule) ErrorLog() string {
 	log := &strings.Builder{}
 
 	fmt.Fprintf(log, "[client %q] ", mr.ClientIPAddress_)
-	if mr.Disruptive_ {
+	switch {
+	case mr.Disruptive_:
 		writeDisruptiveActionSpecificLog(log, mr)
-	} else {
+	default:
 		log.WriteString("Coraza: Warning. ")
 	}
+
 	log.WriteString(msg)
 	log.WriteString(" ")
 	mr.writeDetails(log, matchData)
@@ -288,6 +294,7 @@ func (mr MatchedRule) ErrorLog() string {
 			// Skipping first matchData, it has been just added to the log
 			continue
 		}
+
 		if matchData.Message() != "" || matchData.Data() != "" {
 			mr.writeExtraRuleDetails(log, matchData, n)
 		}

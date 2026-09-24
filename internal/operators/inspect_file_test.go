@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
 )
 
 func TestInspectFileExitCode(t *testing.T) {

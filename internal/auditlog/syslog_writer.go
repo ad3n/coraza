@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"path"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
 )
 
 var syslogDialer = syslog.Dial

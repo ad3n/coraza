@@ -6,8 +6,8 @@ package corazawaf
 import (
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/ad3n/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/types/variables"
 )
 
 type inferredPhases byte
@@ -258,12 +258,14 @@ func computeRuleChainMinPhase(r *Rule) {
 }
 
 func multiphaseSkipVariable(r *Rule, variable variables.RuleVariable, phase types.RulePhase) bool {
-	if r.ParentID_ == 0 && (!r.HasChain || phase >= r.chainMinPhase) {
+	switch {
+	case r.ParentID_ == 0 && (!r.HasChain || phase >= r.chainMinPhase):
 		min := minPhase(variable)
 		// When multiphase evaluation is enabled, any variable is evaluated at its
 		// earliest possible phase, so we make sure to skip in other phases.
 		if min != types.PhaseUnknown {
-			if r.HasChain {
+			switch {
+			case r.HasChain:
 				if min < r.chainMinPhase {
 					// The variable was previously available but not evaluated yet because the
 					// chain wasn't available. We evaluate once during the chainMinPhase and
@@ -277,18 +279,19 @@ func multiphaseSkipVariable(r *Rule, variable variables.RuleVariable, phase type
 				// 	// Chain is available, and variable gets evaluated in its phase and skip the rest.
 				// 	continue
 				// }
-			} else {
+			default:
 				// For rules that have no chains, we know the variable is evaluated in its min phase and no other phases.
 				if min != phase {
 					return true
 				}
 			}
 		}
-	} else if r.HasChain && phase < r.chainMinPhase {
+	case r.HasChain && phase < r.chainMinPhase:
 		// When multiphase evaluation is enabled, if the variable is available but the whole chain is not,
 		// we don't evaluate the rule yet.
 		return true
 	}
+
 	return false
 }
 
@@ -307,12 +310,14 @@ func generateChainMatches(tx *Transaction, matchedValues []types.MatchData, curr
 	for _, mv := range matchedValues {
 		if mv.ChainLevel() == currentDepth {
 			var localebuildingMatchedChain []types.MatchData
-			if buildingMatchedChain == nil {
+			switch {
+			case buildingMatchedChain == nil:
 				localebuildingMatchedChain = []types.MatchData{}
-			} else {
+			default:
 				localebuildingMatchedChain = make([]types.MatchData, len(buildingMatchedChain))
 				copy(localebuildingMatchedChain, buildingMatchedChain)
 			}
+
 			localebuildingMatchedChain = append(localebuildingMatchedChain, mv)
 
 			if mv.ChainLevel() == finalDepth {
@@ -320,6 +325,7 @@ func generateChainMatches(tx *Transaction, matchedValues []types.MatchData, curr
 				*matchedChainsResult = append(*matchedChainsResult, localebuildingMatchedChain)
 				continue
 			}
+
 			generateChainMatches(tx, matchedValues, currentDepth+1, localebuildingMatchedChain, matchedChainsResult)
 		}
 	}

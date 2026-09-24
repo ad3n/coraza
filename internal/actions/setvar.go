@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/ad3n/coraza/v3/collection"
+	"github.com/ad3n/coraza/v3/experimental/plugins/macro"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/types/variables"
 )
 
 // Action Group: Non-disruptive
@@ -121,12 +121,14 @@ func (a *setvarFn) Type() plugintypes.ActionType {
 
 func (a *setvarFn) evaluateTxCollection(r plugintypes.RuleMetadata, tx plugintypes.TransactionState, key string, value string) {
 	var col collection.Map
-	if c, ok := tx.Collection(a.collection).(collection.Map); !ok {
+	switch c, ok := tx.Collection(a.collection).(collection.Map); {
+	case !ok:
 		tx.DebugLogger().Error().Msg("collection in setvar is not a map")
 		return
-	} else {
+	default:
 		col = c
 	}
+
 	if col == nil {
 		tx.DebugLogger().Error().Msg("collection in setvar is nil")
 		return
@@ -136,10 +138,12 @@ func (a *setvarFn) evaluateTxCollection(r plugintypes.RuleMetadata, tx plugintyp
 		col.Remove(key)
 		return
 	}
+
 	currentVal := ""
 	if r := col.Get(key); len(r) > 0 {
 		currentVal = r[0]
 	}
+
 	var err error
 	switch {
 	case len(value) == 0:
@@ -165,6 +169,7 @@ func (a *setvarFn) evaluateTxCollection(r plugintypes.RuleMetadata, tx plugintyp
 				return
 			}
 		}
+
 		currentValInt := 0
 		if currentVal != "" {
 			currentValInt, err = strconv.Atoi(currentVal)
@@ -177,9 +182,11 @@ func (a *setvarFn) evaluateTxCollection(r plugintypes.RuleMetadata, tx plugintyp
 				return
 			}
 		}
-		if value[0] == '+' {
+
+		switch {
+		case value[0] == '+':
 			col.Set(key, []string{strconv.Itoa(currentValInt + val)})
-		} else {
+		default:
 			col.Set(key, []string{strconv.Itoa(currentValInt - val)})
 		}
 	default:

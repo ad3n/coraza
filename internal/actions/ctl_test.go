@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/ad3n/coraza/v3/debuglog"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/internal/memoize"
+	"github.com/ad3n/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/types/variables"
 )
 
 func TestCtl(t *testing.T) {
@@ -196,6 +196,7 @@ func TestCtl(t *testing.T) {
 					t.Errorf("expected 1 range entry, got %d", len(tx.GetRuleRemoveByIDRanges()))
 					return
 				}
+
 				rng := tx.GetRuleRemoveByIDRanges()[0]
 				if rng[0] != 1 || rng[1] != 3 {
 					t.Errorf("unexpected range [%d, %d], want [1, 3]", rng[0], rng[1])
@@ -379,6 +380,7 @@ func TestCtl(t *testing.T) {
 			if test.prepareTX != nil {
 				test.prepareTX(tx)
 			}
+
 			a.Evaluate(r, tx)
 
 			if test.checkTX == nil {
@@ -387,9 +389,10 @@ func TestCtl(t *testing.T) {
 				// t.SkipNow() can't be used because tinygo doesn't support it.
 				// https://github.com/tinygo-org/tinygo/blob/release/src/testing/testing.go#L246
 				return
-			} else {
-				test.checkTX(t, tx, logsBuf.String())
 			}
+
+			test.checkTX(t, tx, logsBuf.String())
+
 		})
 	}
 }
@@ -436,9 +439,11 @@ func TestParseCtl(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %s", err.Error())
 		}
+
 		if rx != nil {
 			t.Errorf("expected nil regex for escaped-slash key, got: %s", rx.String())
 		}
+
 		if key != `/user\/` {
 			t.Errorf("unexpected key, want %q, have %q", `/user\/`, key)
 		}
@@ -450,6 +455,7 @@ func TestParseCtl(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %s", err.Error())
 		}
+
 		if keyRx == nil {
 			t.Error("expected non-nil compiled regex, got nil")
 		}
@@ -497,26 +503,33 @@ func TestParseCtl(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err.Error())
 			}
+
 			if action != tCase.expectAction {
 				t.Errorf("unexpected action, want: %d, have: %d", tCase.expectAction, action)
 			}
+
 			if value != tCase.expectValue {
 				t.Errorf("unexpected value, want: %s, have: %s", tCase.expectValue, value)
 			}
+
 			if collection != tCase.expectCollection {
 				t.Errorf("unexpected collection, want: %s, have: %s", tCase.expectCollection.Name(), collection.Name())
 			}
+
 			if colKey != tCase.expectKey {
 				t.Errorf("unexpected key, want: %s, have: %s", tCase.expectKey, colKey)
 			}
-			if tCase.expectKeyRx == "" {
+
+			switch {
+			case tCase.expectKeyRx == "":
 				if colKeyRx != nil {
 					t.Errorf("unexpected non-nil regex, have: %s", colKeyRx.String())
 				}
-			} else {
-				if colKeyRx == nil {
+			default:
+				switch {
+				case colKeyRx == nil:
 					t.Errorf("expected non-nil regex matching %q, got nil", tCase.expectKeyRx)
-				} else if colKeyRx.String() != tCase.expectKeyRx {
+				case colKeyRx.String() != tCase.expectKeyRx:
 					t.Errorf("unexpected regex, want: %s, have: %s", tCase.expectKeyRx, colKeyRx.String())
 				}
 			}

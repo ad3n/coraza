@@ -23,6 +23,8 @@ import (
 	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
+	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
+	crstests "github.com/corazawaf/coraza-coreruleset/v4/tests"
 	albedo "github.com/coreruleset/albedo/server"
 	"github.com/coreruleset/go-ftw/v2/config"
 	"github.com/coreruleset/go-ftw/v2/output"
@@ -30,12 +32,10 @@ import (
 	"github.com/coreruleset/go-ftw/v2/test"
 	"github.com/rs/zerolog"
 
-	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
-	crstests "github.com/corazawaf/coraza-coreruleset/v4/tests"
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/experimental"
-	txhttp "github.com/corazawaf/coraza/v3/http"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3"
+	"github.com/ad3n/coraza/v3/experimental"
+	txhttp "github.com/ad3n/coraza/v3/http"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 func BenchmarkCRSCompilation(b *testing.B) {
@@ -199,15 +199,18 @@ func BenchmarkCRSPrefilter(b *testing.B) {
 			for _, h := range headers {
 				tx.AddRequestHeader(h[0], h[1])
 			}
+
 			tx.ProcessRequestHeaders()
 			if _, err := tx.ProcessRequestBody(); err != nil {
 				b.Fatal(err)
 			}
+
 			tx.AddResponseHeader("Content-Type", "application/json")
 			tx.ProcessResponseHeaders(200, "OK")
 			if _, err := tx.ProcessResponseBody(); err != nil {
 				b.Fatal(err)
 			}
+
 			tx.ProcessLogging()
 			if err := tx.Close(); err != nil {
 				b.Fatal(err)
@@ -230,18 +233,22 @@ func BenchmarkCRSPrefilter(b *testing.B) {
 			for _, h := range headers {
 				tx.AddRequestHeader(h[0], h[1])
 			}
+
 			tx.ProcessRequestHeaders()
 			if _, _, err := tx.WriteRequestBody(body); err != nil {
 				b.Fatal(err)
 			}
+
 			if _, err := tx.ProcessRequestBody(); err != nil {
 				b.Fatal(err)
 			}
+
 			tx.AddResponseHeader("Content-Type", "application/json")
 			tx.ProcessResponseHeaders(200, "OK")
 			if _, err := tx.ProcessResponseBody(); err != nil {
 				b.Fatal(err)
 			}
+
 			tx.ProcessLogging()
 			if err := tx.Close(); err != nil {
 				b.Fatal(err)
@@ -369,10 +376,11 @@ func BenchmarkCRSPrefilter(b *testing.B) {
 			tx := waf.NewTransaction()
 			tx.ProcessConnection("127.0.0.1", 8080, "10.0.0.1", 443)
 
-			if i%10 == 0 {
+			switch {
+			case i%10 == 0:
 				// Attack: SQLi in query string
 				tx.ProcessURI("/search?q=' OR 1=1 UNION SELECT username,password FROM users--&category=all", "GET", "HTTP/1.1")
-			} else {
+			default:
 				// Benign: API call
 				tx.ProcessURI("/api/v2/users?page=1&limit=50&sort=created_at&order=desc", "GET", "HTTP/1.1")
 			}
@@ -384,11 +392,13 @@ func BenchmarkCRSPrefilter(b *testing.B) {
 			if _, err := tx.ProcessRequestBody(); err != nil {
 				b.Fatal(err)
 			}
+
 			tx.AddResponseHeader("Content-Type", "application/json")
 			tx.ProcessResponseHeaders(200, "OK")
 			if _, err := tx.ProcessResponseBody(); err != nil {
 				b.Fatal(err)
 			}
+
 			tx.ProcessLogging()
 			if err := tx.Close(); err != nil {
 				b.Fatal(err)
@@ -422,7 +432,7 @@ func BenchmarkCRSTransformationCache(b *testing.B) {
 	mediumBody := strings.Join(mediumParams, "&")
 	// Large: 30 params with longer values (complex form, many args)
 	var largeParams []string
-	for i := 0; i < 30; i++ {
+	for i := range 30 {
 		largeParams = append(largeParams, fmt.Sprintf("field_%d=%s", i, strings.Repeat("value", 20)))
 	}
 	largeBody := strings.Join(largeParams, "&")
@@ -662,7 +672,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 
 func BenchmarkCRSMultiWAFCompilation(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		for w := 0; w < 10; w++ {
+		for range 10 {
 			waf := crsWAF(b)
 			if closer, ok := waf.(experimental.WAFCloser); ok {
 				closer.Close()

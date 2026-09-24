@@ -12,9 +12,9 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/experimental/plugins"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3"
+	"github.com/ad3n/coraza/v3/experimental/plugins"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type urlWriter struct {

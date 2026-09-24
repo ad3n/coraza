@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	utils "github.com/ad3n/coraza/v3/internal/strings"
 )
 
 func escapeSeqDecode(input string) (string, bool, error) {
@@ -28,7 +28,8 @@ func doEscapeSeqDecode(input string, pos int) (string, bool) {
 	i := pos
 
 	for i < inputLen {
-		if (input[i] == '\\') && (i+1 < inputLen) {
+		switch {
+		case (input[i] == '\\') && (i+1 < inputLen):
 			var (
 				c  byte
 				ok = true
@@ -98,13 +99,14 @@ func doEscapeSeqDecode(input string, pos int) (string, bool) {
 			d++
 			i += 2
 			changed = true
-		} else {
+		default:
 			/* Input character not a backslash, copy it. */
 			data[d] = input[i]
 			d++
 			i++
 		}
 	}
+
 	return utils.WrapUnsafe(data[:d]), changed
 }
 

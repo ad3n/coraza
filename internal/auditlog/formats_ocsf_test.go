@@ -14,10 +14,10 @@ import (
 	"github.com/valllabh/ocsf-schema-golang/ocsf/v1_2_0/events/application"
 	"github.com/valllabh/ocsf-schema-golang/ocsf/v1_2_0/events/application/enums"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/collections"
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/internal/collections"
+	"github.com/ad3n/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/types/variables"
 )
 
 func TestOCSFFormatter(t *testing.T) {
@@ -27,6 +27,7 @@ func TestOCSFFormatter(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
+
 		if !strings.Contains(f.MIME(), "json") {
 			t.Errorf("failed to match MIME, expected json and got %s", f.MIME())
 		}
@@ -47,7 +48,8 @@ func TestOCSFFormatter(t *testing.T) {
 		}
 
 		// validate transaction interruption
-		if al.Transaction().IsInterrupted() {
+		switch {
+		case al.Transaction().IsInterrupted():
 			if wra.Action != "Denied" {
 				t.Errorf("failed to match audit log Action, \ngot: %s\nexpected: %s", wra.Action, "Denied")
 			}
@@ -55,7 +57,7 @@ func TestOCSFFormatter(t *testing.T) {
 			if wra.ActionId != enums.WEB_RESOURCES_ACTIVITY_ACTION_ID_WEB_RESOURCES_ACTIVITY_ACTION_ID_DENIED {
 				t.Errorf("failed to match audit log Action ID, \ngot: %s\nexpected: %s", wra.ActionId, enums.WEB_RESOURCES_ACTIVITY_ACTION_ID_WEB_RESOURCES_ACTIVITY_ACTION_ID_DENIED)
 			}
-		} else {
+		default:
 			if wra.Action != "Allowed" {
 				t.Errorf("failed to match audit log Action, \ngot: %s\nexpected: %s", wra.Action, "Allowed")
 			}
@@ -80,16 +82,19 @@ func TestOCSFFormatter(t *testing.T) {
 			if wra.HttpRequest.Url.UrlString != al.Transaction().Request().URI() {
 				t.Errorf("failed to match audit log URI, \ngot: %s\nexpected: %s", wra.HttpRequest.Url.UrlString, al.Transaction().Request().URI())
 			}
+
 			// validate Request Method
 			if wra.HttpRequest.HttpMethod != al.Transaction().Request().Method() {
 				t.Errorf("failed to match audit log HTTP Request Method, \ngot: %s\nexpected: %s", wra.HttpRequest.HttpMethod, al.Transaction().Request().Method())
 			}
+
 			// validate Request Headers
 			for _, header := range wra.HttpRequest.HttpHeaders {
 				if header.Value != al.Transaction().Request().Headers()[header.Name][0] {
 					t.Errorf("failed to match audit log Request Header, \ngot: %s\nexpected: %s", header.Value, al.Transaction().Request().Headers()[header.Name][0])
 				}
 			}
+
 			// validate Request Files
 			for _, file := range al.Transaction().Request().Files() {
 				for _, observable := range wra.Observables {
@@ -99,11 +104,13 @@ func TestOCSFFormatter(t *testing.T) {
 								t.Errorf("failed to match audit log Request File Name, \ngot: %s\nexpected: %s", observable.Value, file.Name())
 							}
 						}
+
 						if observable.Type == "Mime" {
 							if file.Mime() != observable.Value {
 								t.Errorf("failed to match audit log Request File Mime, \ngot: %s\nexpected: %s", observable.Value, file.Mime())
 							}
 						}
+
 						if observable.Type == "Size" {
 							if fmt.Sprint(file.Size()) != observable.Value {
 								t.Errorf("failed to match audit log Request File Size, \ngot: %s\nexpected: %s", observable.Value, fmt.Sprint(file.Size()))

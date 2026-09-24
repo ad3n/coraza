@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
 )
 
 // Description:
@@ -52,33 +52,44 @@ func newValidateByteRange(options plugintypes.OperatorOptions) (plugintypes.Oper
 		start, end, ok := strings.Cut(br, "-")
 
 		if !ok {
-			if b, err := strconv.Atoi(start); err != nil {
+			switch b, err := strconv.Atoi(start); {
+			case err != nil:
 				return nil, err
-			} else if err := validateByte(b); err != nil {
-				return nil, err
-			} else {
-				validBytes[b] = true
+			default:
+				switch err := validateByte(b); {
+				case err != nil:
+					return nil, err
+				default:
+					validBytes[b] = true
+				}
 			}
+
 			continue
 		}
+
 		s, err := strconv.Atoi(start)
 		if err != nil {
 			return nil, err
 		}
+
 		if err := validateByte(s); err != nil {
 			return nil, err
 		}
+
 		e, err := strconv.Atoi(end)
 		if err != nil {
 			return nil, err
 		}
+
 		if err := validateByte(e); err != nil {
 			return nil, err
 		}
+
 		for i := s; i <= e; i++ {
 			validBytes[i] = true
 		}
 	}
+
 	return &validateByteRange{validBytes: validBytes}, nil
 }
 

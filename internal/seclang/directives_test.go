@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/environment"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/internal/environment"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 func Test_NonImplementedDirective(t *testing.T) {
@@ -457,11 +457,12 @@ func TestDirectives(t *testing.T) {
 						WAF:  waf,
 					})
 
-					if tCase.check == nil {
+					switch {
+					case tCase.check == nil:
 						if err == nil {
 							t.Error("expected error")
 						}
-					} else {
+					default:
 						if err != nil {
 							match, _ := regexp.MatchString(`rule "\d+" not found`, err.Error())
 							// Logical errors are not checked by this test, therefore this specific pattern is allowed here

@@ -4,7 +4,7 @@
 package transformations
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/ad3n/coraza/v3/internal/strings"
 )
 
 func urlDecodeUni(data string) (string, bool, error) {
@@ -61,6 +61,7 @@ func inplaceUniDecode(input string, d []byte, pos int) (string, bool) {
 			for i < inputLen && input[i] != '%' && input[i] != '+' {
 				i++
 			}
+
 			// copy()'s runtime.memmove call costs more than it saves on short
 			// runs; a direct store (n==1) or manual loop wins until the run
 			// is long enough to amortize that call.
@@ -77,6 +78,7 @@ func inplaceUniDecode(input string, d []byte, pos int) (string, bool) {
 			default:
 				copy(d[c:], input[start:i])
 			}
+
 			c += i - start
 			continue
 		}
@@ -99,9 +101,10 @@ func inplaceUniDecode(input string, d []byte, pos int) (string, bool) {
 				h5 := hexNibble[input[i+5]]
 				if h2 >= 0 && h3 >= 0 && h4 >= 0 && h5 >= 0 {
 					code := rune(h2)<<12 | rune(h3)<<8 | rune(h4)<<4 | rune(h5)
-					if b, ok := unicodeBestFitASCII[code]; ok {
+					switch b, ok := unicodeBestFitASCII[code]; {
+					case ok:
 						d[c] = b
-					} else {
+					default:
 						/* We first make use of the lower byte here,
 						 * ignoring the higher byte. */
 						low := byte(h4)<<4 | byte(h5)
@@ -110,14 +113,17 @@ func inplaceUniDecode(input string, d []byte, pos int) (string, bool) {
 						if low > 0x00 && low < 0x5f && h2 == 15 && h3 == 15 {
 							low += 0x20
 						}
+
 						d[c] = low
 					}
+
 					c++
 					i += 6
 					changed = true
 					continue
 				}
 			}
+
 			/* Invalid or truncated %u escape: copy "%u" verbatim. */
 			d[c] = input[i]
 			d[c+1] = input[i+1]
@@ -138,6 +144,7 @@ func inplaceUniDecode(input string, d []byte, pos int) (string, bool) {
 				continue
 			}
 		}
+
 		/* Not a valid (or truncated) encoding, skip this '%'. */
 		d[c] = input[i]
 		i++

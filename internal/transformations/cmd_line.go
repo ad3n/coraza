@@ -4,7 +4,7 @@
 package transformations
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/ad3n/coraza/v3/internal/strings"
 )
 
 /*
@@ -47,15 +47,17 @@ func doCMDLine(input string, pos int) (string, bool) {
 			changed = true
 		case ' ', ',', ';', '\t', '\r', '\n':
 			/* replace some characters to space (only one) */
-			if !space {
+			switch {
+			case !space:
 				// A non-space delimiter turned into a space is a change; a space
 				// left as a space is not.
 				if a != ' ' {
 					changed = true
 				}
+
 				ret = append(ret, ' ')
 				space = true
-			} else {
+			default:
 				// Collapsing consecutive delimiters drops this character.
 				changed = true
 			}
@@ -65,6 +67,7 @@ func doCMDLine(input string, pos int) (string, bool) {
 				ret = ret[:len(ret)-1]
 				changed = true
 			}
+
 			space = false
 
 			ret = append(ret, a)
@@ -74,10 +77,12 @@ func doCMDLine(input string, pos int) (string, bool) {
 				a += 'a' - 'A'
 				changed = true
 			}
+
 			ret = append(ret, a)
 			space = false
 		}
 	}
+
 	return strings.WrapUnsafe(ret), changed
 }
 

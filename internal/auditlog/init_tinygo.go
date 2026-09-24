@@ -5,7 +5,7 @@
 
 package auditlog
 
-import "github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+import "github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
 
 func init() {
 	RegisterWriter("concurrent", func() plugintypes.AuditLogWriter {

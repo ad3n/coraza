@@ -8,7 +8,7 @@ package seclang
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
 )
 
 func TestCaseSensitiveRuleMatchRegex(t *testing.T) {
@@ -97,15 +97,17 @@ func TestCaseSensitiveURIQueryParam(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(tx.MatchedRules()) == 1 {
+	switch {
+	case len(tx.MatchedRules()) == 1:
 		if len(tx.MatchedRules()[0].MatchedDatas()) != 1 {
 			t.Errorf("failed to test uri query param. Found matches: %d, %+v\n",
 				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
 		}
+
 		if !isMatchData(tx.MatchedRules()[0].MatchedDatas(), "Test1") {
 			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
 		}
-	} else {
+	default:
 		t.Errorf("failed to test uri query param: Same case arg name: %d, %+v\n",
 			len(tx.MatchedRules()), tx.MatchedRules())
 	}
@@ -118,15 +120,17 @@ func TestCaseSensitiveURIQueryParam(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(tx.MatchedRules()) == 1 {
+	switch {
+	case len(tx.MatchedRules()) == 1:
 		if len(tx.MatchedRules()[0].MatchedDatas()) != 1 {
 			t.Errorf("failed to test uri query param. Found matches: %d, %+v\n",
 				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
 		}
+
 		if !isMatchData(tx.MatchedRules()[0].MatchedDatas(), "Test1") {
 			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
 		}
-	} else {
+	default:
 		t.Errorf("failed to test qparam pollution: Multiple arg different case: %d, %+v\n",
 			len(tx.MatchedRules()), tx.MatchedRules())
 	}

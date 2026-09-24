@@ -8,7 +8,7 @@ package corazawaf
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
+	"github.com/ad3n/coraza/v3/experimental/plugins/macro"
 )
 
 func TestRuleIDMandatoryCondition(t *testing.T) {

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 func TestRuleMatch(t *testing.T) {
@@ -50,15 +50,18 @@ func TestRuleMatchWithRegex(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
+
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("id_test", "123")
 	tx.ProcessRequestHeaders()
 	if len(tx.MatchedRules()) != 1 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
 	}
-	if tx.Interruption() == nil {
+
+	switch {
+	case tx.Interruption() == nil:
 		t.Error("failed to interrupt transaction")
-	} else if tx.Interruption().RuleID != 1 {
+	case tx.Interruption().RuleID != 1:
 		t.Error("failed to set interruption rule id")
 	}
 }
@@ -326,6 +329,7 @@ func TestRuleLogging(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
+
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("test1", "123")
 	tx.AddGetRequestArgument("test2", "456")
@@ -333,15 +337,18 @@ func TestRuleLogging(t *testing.T) {
 	if len(tx.MatchedRules()) != 3 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
 	}
+
 	// we expect 2 logs
-	if len(logs) != 2 {
+	switch {
+	case len(logs) != 2:
 		t.Errorf("failed to log with %d", len(logs))
-	} else {
+	default:
 		for _, l := range logs[:1] {
 			if !strings.Contains(l, "[id \"1\"]") {
 				t.Errorf("failed to log rule, got \n%s", l)
 			}
 		}
+
 		if !strings.Contains(logs[1], "[id \"2\"]") {
 			t.Errorf("failed to log rule, got \n%s", logs[2])
 		}
@@ -389,9 +396,10 @@ func TestChainStarterDisruptiveActionFires(t *testing.T) {
 		tx := waf.NewTransaction()
 		tx.AddGetRequestArgument("payload", "attack")
 		tx.ProcessRequestHeaders()
-		if tx.Interruption() == nil {
+		switch {
+		case tx.Interruption() == nil:
 			t.Error("expected interruption from chain starter deny, got nil")
-		} else if tx.Interruption().RuleID != 1 {
+		case tx.Interruption().RuleID != 1:
 			t.Errorf("expected interruption from rule 1, got rule %d", tx.Interruption().RuleID)
 		}
 	})
@@ -480,23 +488,29 @@ func TestPrintedExtraMsgAndDataFromChainedRules(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
+
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("test", "1")
 	it := tx.ProcessRequestHeaders()
-	if it == nil {
+	switch {
+	case it == nil:
 		t.Error("failed to interrupt")
-	} else if it.Status != 403 {
+	case it.Status != 403:
 		t.Errorf("failed to set status, got %d", it.Status)
 	}
+
 	if len(logs) != 1 {
 		t.Errorf("failed to log. Expected 1 entry, got %d", len(logs))
 	}
+
 	if count := strings.Count(logs[0], "1 in ARGS_GET:test"); count != 3 {
 		t.Errorf("failed to log logdata, expected 3 repetitions, got %d", count)
 	}
+
 	if count := strings.Count(logs[0], "Inner message 1"); count != 1 {
 		t.Errorf("Unexpected number of msg from inner rule 1, expected 1 got %d", count)
 	}
+
 	if count := strings.Count(logs[0], "Inner message 2"); count != 1 {
 		t.Errorf("Unexpected number of msg from inner rule 2, expected 1 got %d", count)
 	}
@@ -515,20 +529,25 @@ func TestPrintedMultipleMsgAndDataWithMultiMatch(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
+
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("testArgGet", "tEsT1")
 	it := tx.ProcessRequestHeaders()
-	if it == nil {
+	switch {
+	case it == nil:
 		t.Error("failed to interrupt")
-	} else if it.Status != 403 {
+	case it.Status != 403:
 		t.Errorf("failed to set status, got %d", it.Status)
 	}
+
 	if len(logs) != 1 {
 		t.Errorf("failed to log with %d", len(logs))
 	}
+
 	if count := strings.Count(logs[0], "tEsT1 in ARGS_GET"); count != 1 {
 		t.Errorf("failed to log logdata, expected \"tEsT1 in ARGS_GET\" occurrence, got %s", logs[0])
 	}
+
 	if count := strings.Count(logs[0], "test1 in ARGS_GET"); count != 1 {
 		t.Errorf("failed to log logdata, expected \"test1 in ARGS_GET\" occurrence, got %s", logs[0])
 	}
@@ -587,13 +606,15 @@ func TestStatusFromInterruptions(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
+
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("test1", "123")
 	tx.AddGetRequestArgument("test2", "456")
 	it := tx.ProcessRequestHeaders()
-	if it == nil {
+	switch {
+	case it == nil:
 		t.Error("failed to interrupt")
-	} else if it.Status != 500 {
+	case it.Status != 500:
 		t.Errorf("failed to set status, got %d", it.Status)
 	}
 }
@@ -665,6 +686,7 @@ func TestTxIssue147(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
+
 	tx := waf.NewTransaction()
 	// response body access is required
 	tx.ResponseBodyAccess = true
@@ -674,7 +696,8 @@ func TestTxIssue147(t *testing.T) {
 	_, _ = tx.ProcessRequestBody()
 	tx.ProcessResponseHeaders(200, "HTTP/1.1")
 
-	if tx.IsResponseBodyProcessable() {
+	switch {
+	case tx.IsResponseBodyProcessable():
 		if it, _, err := tx.WriteResponseBody([]byte("#!/usr/bin/python")); it != nil || err != nil {
 			t.Error(err)
 		}
@@ -683,20 +706,23 @@ func TestTxIssue147(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if it != nil {
+
+		switch {
+		case it != nil:
 			httpOutMsg := ""
 			for _, res := range tx.MatchedRules() {
 				httpOutMsg = httpOutMsg + res.MatchedDatas()[0].Key() + ":" + res.MatchedDatas()[0].Value() + "\n"
 				httpOutMsg = httpOutMsg + "Message:" + res.MatchedDatas()[0].Message() + "\n"
 
 			}
+
 			if len(httpOutMsg) == 0 || len(tx.MatchedRules()) == 0 {
 				t.Error("failed to log")
 			}
-		} else {
+		default:
 			t.Error("failed to block response body")
 		}
-	} else {
+	default:
 		t.Error("failed to process response body")
 	}
 }
@@ -1079,12 +1105,13 @@ func TestSingleParameterPollution(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(tx.MatchedRules()) == 1 {
+	switch {
+	case len(tx.MatchedRules()) == 1:
 		if len(tx.MatchedRules()[0].MatchedDatas()) != 1 {
 			t.Errorf("failed to test arguments pollution. Found matches: %d, %+v\n",
 				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
 		}
-	} else {
+	default:
 		t.Errorf("failed to test arguments pollution: Single match fixed case: %d, %+v\n",
 			len(tx.MatchedRules()), tx.MatchedRules())
 	}
@@ -1110,6 +1137,7 @@ SecRule ARGS:test1 "ZZZZ" "id:4, phase:2, log, pass"`
 		t.Error()
 		return
 	}
+
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("test1", "xyz")
 	tx.AddGetRequestArgument("test1", "ABCD")
@@ -1120,16 +1148,19 @@ SecRule ARGS:test1 "ZZZZ" "id:4, phase:2, log, pass"`
 	if err != nil {
 		t.Error(err)
 	}
-	if len(tx.MatchedRules()) == 2 {
+
+	switch {
+	case len(tx.MatchedRules()) == 2:
 		if len(tx.MatchedRules()[0].MatchedDatas()) != 1 {
 			t.Errorf("failed to test first argument pollution. Found matches: %d, %+v\n",
 				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
 		}
+
 		if len(tx.MatchedRules()[1].MatchedDatas()) != 1 {
 			t.Errorf("failed to test second match pollution. Found matches: %d, %+v\n",
 				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
 		}
-	} else {
+	default:
 		t.Errorf("failed to test arguments pollution, less matches than expected: %d", len(tx.MatchedRules()))
 	}
 }
@@ -1153,15 +1184,17 @@ func TestURIQueryParamNameCaseSensitive(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(tx.MatchedRules()) == 1 {
+	switch {
+	case len(tx.MatchedRules()) == 1:
 		if len(tx.MatchedRules()[0].MatchedDatas()) != 1 {
 			t.Errorf("failed to test uri query param. Expected: 1, Found matches: %d, %+v\n",
 				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
 		}
+
 		if !isMatchData(tx.MatchedRules()[0].MatchedDatas(), "Test1") {
 			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
 		}
-	} else {
+	default:
 		t.Errorf("failed to test uri query param: Same case arg name:%d, %+v\n",
 			len(tx.MatchedRules()), tx.MatchedRules())
 	}
@@ -1174,15 +1207,17 @@ func TestURIQueryParamNameCaseSensitive(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(tx.MatchedRules()) == 1 {
+	switch {
+	case len(tx.MatchedRules()) == 1:
 		if len(tx.MatchedRules()[0].MatchedDatas()) != 1 {
 			t.Errorf("Failed to test uri query param. Expected: 1, Found matches: %d, %+v\n",
 				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
 		}
+
 		if !isMatchData(tx.MatchedRules()[0].MatchedDatas(), "Test1") {
 			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
 		}
-	} else {
+	default:
 		t.Error("failed to test qparam pollution: Multiple arg different case:",
 			len(tx.MatchedRules()))
 	}
@@ -1214,9 +1249,10 @@ func TestEscapedQuoteInOperator(t *testing.T) {
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("id", `1"`)
 	it := tx.ProcessRequestHeaders()
-	if it == nil {
+	switch {
+	case it == nil:
 		t.Error("expected transaction to be interrupted for request containing a double quote")
-	} else if it.RuleID != 1 {
+	case it.RuleID != 1:
 		t.Errorf("expected rule ID 1, got %d", it.RuleID)
 	}
 

@@ -111,9 +111,11 @@ func checkADR(name, num, body string) []string {
 			break
 		}
 	}
-	if m := adrTitleRe.FindStringSubmatch(title); m == nil {
+
+	switch m := adrTitleRe.FindStringSubmatch(title); {
+	case m == nil:
 		bad("missing '# ADR-%s: <title>' heading", num)
-	} else if m[1] != num {
+	case m[1] != num:
 		bad("heading says ADR-%s but the filename says %s", m[1], num)
 	}
 
@@ -123,6 +125,7 @@ func checkADR(name, num, body string) []string {
 	for _, m := range adrFieldRe.FindAllStringSubmatch(adrHeaderBlock(body), -1) {
 		fields[m[1]] = strings.TrimSpace(m[2])
 	}
+
 	for _, want := range []string{"Status", "Date", "Version", "PR", "Issue(s)", "Deciders", "Category"} {
 		if fields[want] == "" {
 			bad("missing or empty '- **%s:**' header field", want)
@@ -132,6 +135,7 @@ func checkADR(name, num, body string) []string {
 	if s := fields["Status"]; s != "" && !containsString(adrStatuses, s) && !adrSupersededRe.MatchString(s) {
 		bad("Status %q must be one of %v or 'superseded by ADR-NNNN'", s, adrStatuses)
 	}
+
 	if c := fields["Category"]; c != "" && !adrCategoryRe.MatchString(c) {
 		bad("Category %q must be one of %v, optionally followed by a parenthetical qualifier", c, adrCategories)
 	}
@@ -139,9 +143,10 @@ func checkADR(name, num, body string) []string {
 	// The evidence has to be in the Technical Discussion section itself: a quote
 	// elsewhere in the document does not make an empty section acceptable.
 	discussion, ok := adrSection(body, "## Technical Discussion")
-	if !ok {
+	switch {
+	case !ok:
 		bad("missing '## Technical Discussion' section")
-	} else if len(adrQuotedComments(discussion)) == 0 && !adrMarkerRe.MatchString(discussion) {
+	case len(adrQuotedComments(discussion)) == 0 && !adrMarkerRe.MatchString(discussion):
 		bad("Technical Discussion needs an attributed quote with a permalink, or the marker %q", adrNoDiscussion)
 	}
 
@@ -150,6 +155,7 @@ func checkADR(name, num, body string) []string {
 			bad("quote attribution links to %q, want a corazawaf/coraza comment permalink", q[1])
 		}
 	}
+
 	return out
 }
 

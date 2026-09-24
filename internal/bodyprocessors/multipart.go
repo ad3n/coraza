@@ -12,9 +12,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/collections"
-	"github.com/corazawaf/coraza/v3/internal/environment"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/internal/collections"
+	"github.com/ad3n/coraza/v3/internal/environment"
 )
 
 type multipartBodyProcessor struct{}
@@ -27,9 +27,11 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 		v.MultipartStrictError().(*collections.Single).Set("1")
 		return err
 	}
+
 	if !strings.HasPrefix(mediaType, "multipart/") {
 		return errors.New("not a multipart body")
 	}
+
 	mr := multipart.NewReader(reader, params["boundary"])
 	totalSize := int64(0)
 	filesCol := v.Files()
@@ -44,59 +46,21 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 		if err == io.EOF {
 			break
 		}
+
 		if err != nil {
 			v.MultipartStrictError().(*collections.Single).Set("1")
 			return err
 		}
+
 		partName := p.FormName()
 		for key, values := range p.Header {
 			for _, value := range values {
 				headersNames.Add(partName, fmt.Sprintf("%s: %s", key, value))
 			}
 		}
-		// if is a file
+
 		filename := originFileName(p)
-		if filename != "" {
-			var size int64
-			seenUnexpectedEOF := false
-			if environment.HasAccessToFS {
-				// Only copy file to temp when not running in TinyGo
-				temp, err := os.CreateTemp(storagePath, "crzmp*")
-				if err != nil {
-					v.MultipartStrictError().(*collections.Single).Set("1")
-					return err
-				}
-				defer temp.Close()
-				sz, err := io.Copy(temp, p)
-				if err != nil {
-					if !errors.Is(err, io.ErrUnexpectedEOF) {
-						v.MultipartStrictError().(*collections.Single).Set("1")
-						return err
-					}
-					seenUnexpectedEOF = true
-				}
-				size = sz
-				filesTmpNamesCol.Add("", temp.Name())
-			} else {
-				sz, err := io.Copy(io.Discard, p)
-				if err != nil {
-					if !errors.Is(err, io.ErrUnexpectedEOF) {
-						v.MultipartStrictError().(*collections.Single).Set("1")
-						return err
-					}
-					seenUnexpectedEOF = true
-				}
-				size = sz
-			}
-			totalSize += size
-			filesCol.Add("", filename)
-			fileSizesCol.SetIndex(filename, 0, fmt.Sprintf("%d", size))
-			filesNamesCol.Add("", p.FormName())
-			filesCombinedSizeCol.(*collections.Single).Set(fmt.Sprintf("%d", totalSize))
-			if seenUnexpectedEOF {
-				break
-			}
-		} else {
+		if filename == "" {
 			// if is a field
 			data, err := io.ReadAll(p)
 			if err != nil {
@@ -105,14 +69,67 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 					return err
 				}
 			}
+
 			totalSize += int64(len(data))
 			postCol.Add(p.FormName(), string(data))
 			filesCombinedSizeCol.(*collections.Single).Set(fmt.Sprintf("%d", totalSize))
 			if errors.Is(err, io.ErrUnexpectedEOF) {
 				break
 			}
+
+			continue
 		}
+
+		// if is a file
+		var size int64
+		seenUnexpectedEOF := false
+		switch {
+		case environment.HasAccessToFS:
+			// Only copy file to temp when not running in TinyGo
+			temp, err := os.CreateTemp(storagePath, "crzmp*")
+			if err != nil {
+				v.MultipartStrictError().(*collections.Single).Set("1")
+				return err
+			}
+			defer temp.Close()
+
+			sz, err := io.Copy(temp, p)
+			if err != nil {
+				if !errors.Is(err, io.ErrUnexpectedEOF) {
+					v.MultipartStrictError().(*collections.Single).Set("1")
+					return err
+				}
+
+				seenUnexpectedEOF = true
+			}
+
+			size = sz
+			filesTmpNamesCol.Add("", temp.Name())
+		default:
+			sz, err := io.Copy(io.Discard, p)
+			if err != nil {
+				if !errors.Is(err, io.ErrUnexpectedEOF) {
+					v.MultipartStrictError().(*collections.Single).Set("1")
+					return err
+				}
+
+				seenUnexpectedEOF = true
+			}
+
+			size = sz
+		}
+
+		totalSize += size
+		filesCol.Add("", filename)
+		fileSizesCol.SetIndex(filename, 0, fmt.Sprintf("%d", size))
+		filesNamesCol.Add("", p.FormName())
+		filesCombinedSizeCol.(*collections.Single).Set(fmt.Sprintf("%d", totalSize))
+		if seenUnexpectedEOF {
+			break
+		}
+
 	}
+
 	return nil
 }
 

@@ -15,7 +15,7 @@ import (
 
 	"rsc.io/binaryregexp"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
 )
 
 // Description:
@@ -64,12 +64,13 @@ var _ plugintypes.Operator = (*rx)(nil)
 
 func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	var data string
-	if shouldNotUseMultilineRegexesOperatorByDefault {
+	switch {
+	case shouldNotUseMultilineRegexesOperatorByDefault:
 		// (?s) enables dotall mode, required by some CRS rules and matching ModSec behavior, see
 		// - https://github.com/google/re2/wiki/Syntax
 		// - Flag usage: https://groups.google.com/g/golang-nuts/c/jiVdamGFU9E
 		data = fmt.Sprintf("(?s)%s", options.Arguments)
-	} else {
+	default:
 		// TODO: deprecate multiline modifier set by default in Coraza v4
 		// CRS rules will explicitly set the multiline modifier when needed
 		// Having it enabled by default can lead to false positives and less performance
@@ -97,6 +98,7 @@ func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		c := &rxCompiled{re: re}
 		if options.RxPreFilterEnabled {
 			c.minLen = minMatchLength(data)
@@ -113,11 +115,13 @@ func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 				}
 			}
 		}
+
 		return c, nil
 	})
 	if err != nil {
 		return nil, err
 	}
+
 	c := compiled.(*rxCompiled)
 	return &rx{
 		re:           c.re,
@@ -133,9 +137,11 @@ func (o *rx) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	if len(value) < o.minLen {
 		return false
 	}
+
 	if o.prefilter != nil && !o.prefilter(value) {
 		return false
 	}
+
 	// Gap 2: exact-match bypass for patterns like ^Upload$ — skip the NFA entirely.
 	// The \n guard protects against multi-line inputs where (?m)$ matches
 	// before a newline (e.g. "Upload\nmore" would satisfy (?sm)^Upload$).
@@ -143,6 +149,7 @@ func (o *rx) Evaluate(tx plugintypes.TransactionState, value string) bool {
 		if o.exactMatchCI {
 			return strings.EqualFold(value, o.exactMatch)
 		}
+
 		return value == o.exactMatch
 	}
 
@@ -154,6 +161,7 @@ func (o *rx) Evaluate(tx plugintypes.TransactionState, value string) bool {
 		if match == nil {
 			return false
 		}
+
 		// match has 2 entries per group: match[2*i] is the start index,
 		// match[2*i+1] is the end index for capture group i. Group 0 is
 		// the full match, groups 1..N are the parenthesized sub-expressions.
@@ -161,18 +169,22 @@ func (o *rx) Evaluate(tx plugintypes.TransactionState, value string) bool {
 			if i == 9 {
 				return true
 			}
+
 			// A negative start index means the group did not participate in the match
 			// (e.g. an optional group like (foo)? when foo is absent).
-			if match[2*i] >= 0 {
+			switch {
+			case match[2*i] >= 0:
 				tx.CaptureField(i, value[match[2*i]:match[2*i+1]])
-			} else {
+			default:
 				tx.CaptureField(i, "")
 			}
 		}
+
 		return true
-	} else {
-		return o.re.MatchString(value)
 	}
+
+	return o.re.MatchString(value)
+
 }
 
 // binaryRx is exactly the same as rx, but using the binaryregexp package for matching
@@ -199,16 +211,20 @@ func (o *binaryRX) Evaluate(tx plugintypes.TransactionState, value string) bool 
 		if len(match) == 0 {
 			return false
 		}
+
 		for i, c := range match {
 			if i == 9 {
 				return true
 			}
+
 			tx.CaptureField(i, c)
 		}
+
 		return true
-	} else {
-		return o.re.MatchString(value)
 	}
+
+	return o.re.MatchString(value)
+
 }
 
 func init() {

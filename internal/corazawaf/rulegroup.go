@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/internal/corazatypes"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/ad3n/coraza/v3/internal/corazatypes"
+	utils "github.com/ad3n/coraza/v3/internal/strings"
+	"github.com/ad3n/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/types/variables"
 )
 
 // RuleGroup is a collection of rules
@@ -30,17 +30,19 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 		return nil
 	}
 
-	if shouldDoMandatoryRuleIdCheck {
+	switch {
+	case shouldDoMandatoryRuleIdCheck:
 		// rule id is mandatory and must be unique ID for all SecRule/SecAction.
 		if rule.SecMark_ == "" { // means its SecRule/SecAction
 			if rule.ID_ == 0 {
 				return fmt.Errorf("rule id is missing, rule residing in file %s at line %d", rule.File_, rule.Line_)
 			}
+
 			if rg.FindByID(rule.ID_) != nil {
 				return fmt.Errorf("duplicated rule id %d", rule.ID_)
 			}
 		}
-	} else {
+	default:
 		// rule id is not mandatory, but if it is set, it must be unique ID
 		if rule.ID_ != 0 && rg.FindByID(rule.ID_) != nil {
 			return fmt.Errorf("duplicated rule id %d", rule.ID_)
@@ -51,12 +53,13 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 	rule.set(rule.Phase_)
 	for _, v := range rule.variables {
 		min := minPhase(v.Variable)
-		if min != types.PhaseUnknown {
+		switch {
+		case min != types.PhaseUnknown:
 			// We infer the earliest phase a variable used by the rule may be evaluated for use when
 			// multiphase evaluation is enabled
 			rule.set(min)
 			numInferred++
-		} else {
+		default:
 			rule.withPhaseUnknownVariable = true
 		}
 	}
@@ -164,6 +167,7 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	for k := range transformationCache {
 		delete(transformationCache, k)
 	}
+
 RulesLoop:
 	for i := range rg.rules {
 		r := &rg.rules[i]
@@ -172,6 +176,7 @@ RulesLoop:
 		if tx.IsInterrupted() && phase != types.PhaseLogging {
 			break RulesLoop
 		}
+
 		// Rules with phase 0 will always run
 		if r.Phase_ != 0 && r.Phase_ != phase {
 			// Execute the rule in inferred phases too if multiphase evaluation is enabled
@@ -195,6 +200,7 @@ RulesLoop:
 				Msg("Skipping rule")
 			continue RulesLoop
 		}
+
 		for _, rng := range tx.ruleRemoveByIDRanges {
 			if r.ID_ >= rng[0] && r.ID_ <= rng[1] {
 				tx.DebugLogger().Debug().
@@ -206,22 +212,26 @@ RulesLoop:
 
 		// we always evaluate secmarkers
 		if tx.SkipAfter != "" {
-			if r.SecMark_ == tx.SkipAfter {
+			switch {
+			case r.SecMark_ == tx.SkipAfter:
 				tx.SkipAfter = ""
-			} else {
+			default:
 				tx.DebugLogger().Debug().
 					Int("rule_id", r.ID_).
 					Str("skip_after", tx.SkipAfter).
 					Str("secmarker", r.SecMark_).
 					Msg("Skipping rule because of SkipAfter")
 			}
+
 			continue
 		}
+
 		if tx.Skip > 0 {
 			tx.Skip--
 			// Skipping rule
 			continue
 		}
+
 		switch tx.AllowType {
 		case corazatypes.AllowTypeUnset:
 			// No action needed
@@ -243,6 +253,7 @@ RulesLoop:
 				// tx.AllowType is not resetted because another request phase might be called
 				break RulesLoop
 			}
+
 			if phase == types.PhaseRequestBody {
 				// // tx.AllowType is resetted, currently PhaseRequestBody is the last request phase
 				tx.AllowType = corazatypes.AllowTypeUnset
@@ -251,6 +262,7 @@ RulesLoop:
 		case corazatypes.AllowTypeAll:
 			break RulesLoop
 		}
+
 		// Reset matched_vars only when the previous rule actually populated it.
 		// In typical CRS evaluation most rules don't match, so this avoids
 		// iterating an empty map on every rule.
@@ -272,6 +284,7 @@ RulesLoop:
 	if tx.AllowType == corazatypes.AllowTypePhase {
 		tx.AllowType = corazatypes.AllowTypeUnset
 	}
+
 	// Reset Skip counter at the end of each phase. Skip actions work only within the current processing phase
 	tx.Skip = 0
 

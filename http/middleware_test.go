@@ -20,12 +20,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/seclang"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3"
+	"github.com/ad3n/coraza/v3/debuglog"
+	"github.com/ad3n/coraza/v3/experimental/plugins/macro"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/internal/seclang"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 func TestProcessRequest(t *testing.T) {
@@ -99,11 +99,14 @@ SecRule &REQUEST_HEADERS:Transfer-Encoding "!@eq 0" "id:1,phase:1,deny"
 	if err != nil {
 		t.Fatal(err)
 	}
-	if it == nil {
+
+	switch {
+	case it == nil:
 		t.Fatal("Expected interruption")
-	} else if it.RuleID != 1 {
+	case it.RuleID != 1:
 		t.Fatalf("Expected rule 1 to be triggered, got rule %d", it.RuleID)
 	}
+
 	if err := tx.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -125,11 +128,14 @@ SecRule REQUEST_HEADERS:Transfer-Encoding "@contains identity" "id:1,phase:1,den
 	if err != nil {
 		t.Fatal(err)
 	}
-	if it == nil {
+
+	switch {
+	case it == nil:
 		t.Fatal("Expected interruption: second Transfer-Encoding value should be processed")
-	} else if it.RuleID != 1 {
+	case it.RuleID != 1:
 		t.Fatalf("Expected rule 1 to be triggered, got rule %d", it.RuleID)
 	}
+
 	if err := tx.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -470,22 +476,26 @@ func runAgainstWAF(t *testing.T, tCase httpTest, waf coraza.WAF) {
 		for k, v := range tCase.respHeaders {
 			w.Header().Set(k, v)
 		}
+
 		w.WriteHeader(201)
-		if tCase.echoReqBody {
+		switch {
+		case tCase.echoReqBody:
 			buf, err := io.ReadAll(req.Body)
 			if err != nil {
 				serverErrC <- err
 			}
+
 			if _, err := w.Write(buf); err != nil {
 				serverErrC <- err
 			}
-		} else {
+		default:
 			if _, err := w.Write([]byte(tCase.respBody)); err != nil {
 				serverErrC <- err
 			}
 		}
 	})))
-	if tCase.http2 {
+	switch {
+	case tCase.http2:
 		ts.EnableHTTP2 = true
 		ts.StartTLS()
 		// Go 1.25's crypto/tls still offers X25519 under GODEBUG=fips140=only, where crypto/ecdh
@@ -495,7 +505,7 @@ func runAgainstWAF(t *testing.T, tCase httpTest, waf coraza.WAF) {
 		if tr, ok := ts.Client().Transport.(*http.Transport); ok && tr.TLSClientConfig != nil {
 			tr.TLSClientConfig.CurvePreferences = []tls.CurveID{tls.CurveP256}
 		}
-	} else {
+	default:
 		ts.Start()
 	}
 	defer ts.Close()
@@ -504,6 +514,7 @@ func runAgainstWAF(t *testing.T, tCase httpTest, waf coraza.WAF) {
 	if tCase.reqBody != "" {
 		reqBody = strings.NewReader(tCase.reqBody)
 	}
+
 	req, _ := http.NewRequest("POST", ts.URL+tCase.reqURI, reqBody)
 	// When sending a POST request, the "application/x-www-form-urlencoded" content-type header is needed
 	// being the only content-type for which by default Coraza enforces the request body processing.

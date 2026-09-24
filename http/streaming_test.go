@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/ad3n/coraza/v3"
 )
 
 // We use a spy to verify Flush() is actually called on the underlying writer.

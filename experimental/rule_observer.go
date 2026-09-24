@@ -4,8 +4,8 @@
 package experimental
 
 import (
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 // wafConfigWithRuleObserver is the private capability interface

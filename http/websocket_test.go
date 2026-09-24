@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/ad3n/coraza/v3"
 )
 
 // wsUpgradeViaWriteHeader is a WebSocket echo handler that follows the standard

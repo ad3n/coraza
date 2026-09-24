@@ -6,8 +6,8 @@ package seclang
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 // The update directives took the address of a range variable over

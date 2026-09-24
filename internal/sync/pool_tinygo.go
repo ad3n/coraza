@@ -5,7 +5,7 @@
 
 package sync
 
-func NewPool(new func() interface{}) Pool {
+func NewPool(new func() any) Pool {
 	return &tinygoPool{
 		new: new,
 	}
@@ -13,19 +13,20 @@ func NewPool(new func() interface{}) Pool {
 
 // TinyGo is not concurrent, so we do not need a complicated implementation. We just want to reuse memory.
 type tinygoPool struct {
-	pool []interface{}
-	new  func() interface{}
+	pool []any
+	new  func() any
 }
 
-func (p *tinygoPool) Get() interface{} {
+func (p *tinygoPool) Get() any {
 	if len(p.pool) == 0 {
 		return p.new()
 	}
+
 	x := p.pool[len(p.pool)-1]
 	p.pool = p.pool[:len(p.pool)-1]
 	return x
 }
 
-func (p *tinygoPool) Put(x interface{}) {
+func (p *tinygoPool) Put(x any) {
 	p.pool = append(p.pool, x)
 }

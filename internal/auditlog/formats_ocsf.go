@@ -20,8 +20,8 @@ import (
 	"github.com/valllabh/ocsf-schema-golang/ocsf/v1_2_0/objects"
 	ocsf_object_enums "github.com/valllabh/ocsf-schema-golang/ocsf/v1_2_0/objects/enums"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 type ocsfFormatter struct{}

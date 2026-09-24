@@ -13,7 +13,7 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 // hijackerTracker wraps an http.Hijacker and tracks whether Hijack has been called.
@@ -246,11 +246,12 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 		}
 
 		if tx.IsResponseBodyAccessible() && tx.IsResponseBodyProcessable() && !i.wroteBufferedBodyToDownstream {
-			if it, err := tx.ProcessResponseBody(); err != nil {
+			switch it, err := tx.ProcessResponseBody(); {
+			case err != nil:
 				i.overrideWriteHeader(http.StatusInternalServerError)
 				i.flushWriteHeader()
 				return err
-			} else if it != nil {
+			case it != nil:
 				// if there is an interruption we must clean the headers and override the status code
 				i.cleanHeaders()
 				i.Header().Set("Content-Length", "0")
@@ -258,11 +259,12 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 				i.flushWriteHeader()
 				return nil
 			}
+
 			return i.writeBufferedResponseBodyToDownstream()
-		} else {
-			i.allowFlushing = true
-			i.flushWriteHeader()
 		}
+
+		i.allowFlushing = true
+		i.flushWriteHeader()
 
 		return nil
 	}

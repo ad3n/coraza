@@ -52,12 +52,15 @@ func stripWindowsADS(data string) string {
 		trailingSlash, data = "/", data[:len(data)-1]
 	}
 
-	if idx := strings.LastIndexByte(data, '/'); idx >= 0 {
+	switch idx := strings.LastIndexByte(data, '/'); {
+	case idx >= 0:
 		if colon := strings.IndexByte(data[idx+1:], ':'); colon >= 0 {
 			data = data[:idx+1+colon]
 		}
-	} else if colon := strings.IndexByte(data, ':'); colon >= 0 {
-		data = data[:colon]
+	default:
+		if colon := strings.IndexByte(data, ':'); colon >= 0 {
+			data = data[:colon]
+		}
 	}
 
 	return prefix + data + trailingSlash

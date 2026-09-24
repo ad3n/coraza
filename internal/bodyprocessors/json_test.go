@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tidwall/gjson"
+	"github.com/ad3n/gjson"
 )
 
 const (
@@ -190,6 +190,7 @@ func TestReadJSON(t *testing.T) {
 				if err != nil {
 					t.Error(err)
 				}
+
 				// Print the keys for debugging
 				t.Logf("Actual keys for nested_empty: %v", mapKeys(jsonMap))
 				return
@@ -199,18 +200,21 @@ func TestReadJSON(t *testing.T) {
 				if tt.err == nil || err.Error() != tt.err.Error() {
 					t.Error(err)
 				}
+
 				return
 			}
 
 			for k, want := range tt.want {
-				if have, ok := jsonMap[k]; ok {
+				switch have, ok := jsonMap[k]; {
+				case ok:
 					if want != have {
 						t.Errorf("key=%s, want %s, have %s", k, want, have)
 					}
-				} else {
+				default:
 					t.Errorf("missing key: %s", k)
 				}
 			}
+
 			for k := range jsonMap {
 				if _, ok := tt.want[k]; !ok {
 					t.Errorf("unexpected key: %s", k)
@@ -283,7 +287,7 @@ func BenchmarkValidationOverhead(b *testing.B) {
 			json: func() string {
 				var sb strings.Builder
 				sb.WriteString("[")
-				for i := 0; i < 100; i++ {
+				for i := range 100 {
 					if i > 0 {
 						sb.WriteString(",")
 					}

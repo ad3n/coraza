@@ -14,10 +14,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/auditlog"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/internal/auditlog"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
+	utils "github.com/ad3n/coraza/v3/internal/strings"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
@@ -97,19 +97,23 @@ func findFileContaining(path string, search string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	for _, file := range files {
-		if file.IsDir() {
+		switch {
+		case file.IsDir():
 			fullpath := path + "/" + file.Name()
 			file, err := findFileContaining(fullpath, search)
 			if err != nil {
 				return "", err
 			}
+
 			if file != "" {
 				return file, nil
 			}
-		} else if strings.Contains(file.Name(), search) {
+		case strings.Contains(file.Name(), search):
 			return path + "/" + file.Name(), nil
 		}
 	}
+
 	return "", nil
 }

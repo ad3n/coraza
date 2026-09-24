@@ -1,3 +1,6 @@
+// Copyright 2026 Juan Pablo Tosso and the OWASP Coraza contributors
+// SPDX-License-Identifier: Apache-2.0
+
 //go:build coraza.rule.rx_prefilter
 
 // rxprefilter_crs_test.go: correctness and benchmark tests driven entirely by
@@ -100,29 +103,32 @@ func joinContinuationLines(src string) string {
 	var cur strings.Builder
 	for _, l := range lines {
 		trimmed := strings.TrimRight(l, " \t")
-		if strings.HasSuffix(trimmed, "\\") {
-			cur.WriteString(strings.TrimSuffix(trimmed, "\\"))
+		switch before, ok := strings.CutSuffix(trimmed, "\\"); {
+		case ok:
+			cur.WriteString(before)
 			cur.WriteString(" ")
-		} else {
+		default:
 			cur.WriteString(l)
 			out = append(out, cur.String())
 			cur.Reset()
 		}
 	}
+
 	if cur.Len() > 0 {
 		out = append(out, cur.String())
 	}
+
 	return strings.Join(out, "\n")
 }
 
 // extractSecRuleID pulls the id:NNNN value from a SecRule line.
 func extractSecRuleID(line string) string {
 	const marker = "id:"
-	idx := strings.Index(line, marker)
-	if idx < 0 {
+	_, s, ok := strings.Cut(line, marker)
+	if !ok {
 		return ""
 	}
-	s := line[idx+len(marker):]
+
 	// id is followed by comma, space or quote
 	end := strings.IndexAny(s, ", \t\"'\\")
 	if end < 0 {
@@ -134,11 +140,11 @@ func extractSecRuleID(line string) string {
 // extractRXPattern pulls the pattern argument from "@rx PATTERN".
 func extractRXPattern(line string) string {
 	const marker = `"@rx `
-	idx := strings.Index(line, marker)
-	if idx < 0 {
+	_, rest, ok := strings.Cut(line, marker)
+	if !ok {
 		return ""
 	}
-	rest := line[idx+len(marker):]
+
 	// Pattern ends at the closing quote of the SecRule action string.
 	// The closing quote is the first unescaped " character.
 	var sb strings.Builder
@@ -160,11 +166,11 @@ func extractRXPattern(line string) string {
 // Returns 0 if not found.
 func extractPL(line string) int {
 	const marker = "paranoia-level/"
-	idx := strings.Index(line, marker)
-	if idx < 0 {
+	_, s, ok := strings.Cut(line, marker)
+	if !ok {
 		return 0
 	}
-	s := line[idx+len(marker):]
+
 	end := strings.IndexAny(s, "', \t\"")
 	if end < 0 {
 		end = len(s)
@@ -250,21 +256,23 @@ func extractPayloadsFromYAML(src, ruleID string) []ftWPayload {
 			cur = &stages[len(stages)-1]
 			continue
 		}
+
 		if cur == nil {
 			continue
 		}
 
-		if strings.HasPrefix(line, "uri:") {
+		switch {
+		case strings.HasPrefix(line, "uri:"):
 			v := yamlStringValue(line[4:])
 			if v != "" {
 				cur.uris = append(cur.uris, v)
 			}
-		} else if strings.HasPrefix(line, "data:") {
+		case strings.HasPrefix(line, "data:"):
 			v := yamlStringValue(line[5:])
 			if v != "" {
 				cur.datas = append(cur.datas, v)
 			}
-		} else if strings.HasPrefix(line, "log_contains:") && strings.Contains(line, ruleID) {
+		case strings.HasPrefix(line, "log_contains:") && strings.Contains(line, ruleID):
 			cur.fires = true
 		}
 	}
@@ -277,12 +285,15 @@ func extractPayloadsFromYAML(src, ruleID string) []ftWPayload {
 			if err != nil {
 				decoded = u
 			}
+
 			out = append(out, ftWPayload{value: decoded, shouldFire: s.fires, ruleID: ruleID})
 		}
+
 		for _, d := range s.datas {
 			out = append(out, ftWPayload{value: d, shouldFire: s.fires, ruleID: ruleID})
 		}
 	}
+
 	return out
 }
 
@@ -290,11 +301,13 @@ func extractPayloadsFromYAML(src, ruleID string) []ftWPayload {
 // scalar value.
 func yamlStringValue(s string) string {
 	s = strings.TrimSpace(s)
-	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
+	switch {
+	case len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"':
 		s = s[1 : len(s)-1]
-	} else if len(s) >= 2 && s[0] == '\'' && s[len(s)-1] == '\'' {
+	case len(s) >= 2 && s[0] == '\'' && s[len(s)-1] == '\'':
 		s = s[1 : len(s)-1]
 	}
+
 	return strings.TrimSpace(s)
 }
 
@@ -502,7 +515,7 @@ func BenchmarkCRSPrefilterVsRegex(b *testing.B) {
 		}
 		var payloads []string
 		payloads = append(payloads, attacks...)
-		for rep := 0; rep < 9; rep++ {
+		for range 9 {
 			payloads = append(payloads, benignCRSPayloads...)
 		}
 
@@ -587,7 +600,7 @@ func BenchmarkCRSPrefilterVsRegexPL1(b *testing.B) {
 		}
 		var payloads []string
 		payloads = append(payloads, attacks...)
-		for rep := 0; rep < 9; rep++ {
+		for range 9 {
 			payloads = append(payloads, benignCRSPayloads...)
 		}
 

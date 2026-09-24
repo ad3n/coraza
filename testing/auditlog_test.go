@@ -14,9 +14,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/auditlog"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/seclang"
+	"github.com/ad3n/coraza/v3/internal/auditlog"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/internal/seclang"
 )
 
 func TestAuditLogMessages(t *testing.T) {
@@ -235,14 +235,17 @@ func TestAuditLogOnWithNoLog(t *testing.T) {
 	`); err != nil {
 		t.Fatal(err)
 	}
+
 	file, err := os.CreateTemp(t.TempDir(), "tmp.log")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer file.Close()
+
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}
+
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("test", "test")
 	tx.ProcessRequestHeaders()
@@ -250,14 +253,16 @@ func TestAuditLogOnWithNoLog(t *testing.T) {
 	if _, err := file.Seek(0, 0); err != nil {
 		t.Error(err)
 	}
+
 	tx.ProcessLogging()
 	var al2 auditlog.Log
 	// there should be no audit log because of nolog
-	if err := json.NewDecoder(file).Decode(&al2); err == nil {
+	switch err := json.NewDecoder(file).Decode(&al2); {
+	case err == nil:
 		if al2.Messages() != nil {
 			t.Errorf("Unexpected rule logged")
 		}
-	} else {
+	default:
 		t.Error(err)
 	}
 }

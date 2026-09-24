@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/environment"
-	"github.com/corazawaf/coraza/v3/internal/seclang"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/internal/environment"
+	"github.com/ad3n/coraza/v3/internal/seclang"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 // WAF instance is used to store configurations and rules
@@ -128,9 +128,10 @@ func populateAuditLog(waf *corazawaf.WAF, c *wafConfig) {
 		return
 	}
 
-	if c.auditLog.relevantOnly {
+	switch {
+	case c.auditLog.relevantOnly:
 		waf.AuditEngine = types.AuditEngineRelevantOnly
-	} else {
+	default:
 		waf.AuditEngine = types.AuditEngineOn
 	}
 

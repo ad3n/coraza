@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/ad3n/coraza/v3"
 )
 
 func TestWriteHeader(t *testing.T) {
@@ -953,13 +953,18 @@ func TestResponseBody(t *testing.T) {
 						if len(chunks) == 1 {
 							w.Header().Set("Content-Length", strconv.Itoa(len(testCase.content)))
 						}
+
 						w.Header().Set("Content-Type", "text/plain")
 						for _, chunk := range chunks {
-							if n, err := fmt.Fprint(w, chunk); err != nil {
+							switch n, err := fmt.Fprint(w, chunk); {
+							case err != nil:
 								t.Logf("failed to write response: %s", err)
-							} else if got, want := n, len(chunk); got != want {
-								t.Errorf("written response byte count mismatch, got=%d, want=%d", got, want)
+							default:
+								if got, want := n, len(chunk); got != want {
+									t.Errorf("written response byte count mismatch, got=%d, want=%d", got, want)
+								}
 							}
+
 							if f, ok := w.(http.Flusher); ok && len(chunks) > 1 {
 								f.Flush()
 							}
@@ -984,6 +989,7 @@ func TestResponseBody(t *testing.T) {
 						if err != nil {
 							t.Fatalf("failed to read response body: %v", err)
 						}
+
 						if got, want := string(body), testCase.content; got != want {
 							t.Errorf("unexpected response body, got=%q, want=%q", got, want)
 						}
@@ -1180,6 +1186,7 @@ func wsEchoOneFrame(conn net.Conn, brw *bufio.ReadWriter) {
 	if _, err := io.ReadFull(brw, header); err != nil {
 		return
 	}
+
 	masked := header[1]&0x80 != 0
 	n := int(header[1] & 0x7F)
 	if n == wsPayloadLen16 {
@@ -1187,32 +1194,39 @@ func wsEchoOneFrame(conn net.Conn, brw *bufio.ReadWriter) {
 		if _, err := io.ReadFull(brw, ext); err != nil {
 			return
 		}
+
 		n = int(ext[0])<<8 | int(ext[1])
 	}
+
 	var maskKey [4]byte
 	if masked {
 		if _, err := io.ReadFull(brw, maskKey[:]); err != nil {
 			return
 		}
 	}
+
 	payload := make([]byte, n)
 	if _, err := io.ReadFull(brw, payload); err != nil {
 		return
 	}
+
 	if masked {
 		for i := range payload {
 			payload[i] ^= maskKey[i%4]
 		}
 	}
+
 	// Echo back as an unmasked server frame preserving the opcode.
 	// Encode the payload length per RFC 6455 §5.2.
 	var frame []byte
-	if len(payload) < wsPayloadLen16 {
+	switch {
+	case len(payload) < wsPayloadLen16:
 		frame = []byte{header[0], byte(len(payload))}
-	} else {
+	default:
 		n16 := uint16(len(payload))
 		frame = []byte{header[0], wsPayloadLen16, byte(n16 >> 8), byte(n16)}
 	}
+
 	frame = append(frame, payload...)
 	_, _ = conn.Write(frame)
 }

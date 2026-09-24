@@ -16,23 +16,26 @@ func doReplaceComments(value string) (string, bool) {
 	input := []byte(value)
 	inputLen := len(input)
 	for i < inputLen {
-		if !incomment {
-			if (input[i] == '/') && (i+1 < inputLen) && (input[i+1] == '*') {
+		switch {
+		case !incomment:
+			switch {
+			case (input[i] == '/') && (i+1 < inputLen) && (input[i+1] == '*'):
 				incomment = true
 				changed = true
 				i += 2
-			} else {
+			default:
 				input[j] = input[i]
 				i++
 				j++
 			}
-		} else {
-			if (input[i] == '*') && (i+1 < inputLen) && (input[i+1] == '/') {
+		default:
+			switch {
+			case (input[i] == '*') && (i+1 < inputLen) && (input[i+1] == '/'):
 				incomment = false
 				i += 2
 				input[j] = ' '
 				j++
-			} else {
+			default:
 				i++
 			}
 		}

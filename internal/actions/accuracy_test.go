@@ -6,7 +6,7 @@ package actions
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
 )
 
 func TestAccuracyInit(t *testing.T) {
@@ -25,11 +25,12 @@ func TestAccuracyInit(t *testing.T) {
 		a := accuracy()
 		r := &corazawaf.Rule{}
 		err := a.Init(r, test.data)
-		if test.expectedError {
+		switch {
+		case test.expectedError:
 			if err == nil {
 				t.Errorf("expected error")
 			}
-		} else {
+		default:
 			if err != nil {
 				t.Errorf("unexpected error: %s", err.Error())
 			}

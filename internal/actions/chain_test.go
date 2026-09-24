@@ -7,7 +7,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
 )
 
 func TestChainInit(t *testing.T) {

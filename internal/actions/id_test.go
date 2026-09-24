@@ -6,7 +6,7 @@ package actions
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
 )
 
 func TestIdInit(t *testing.T) {
@@ -26,9 +26,10 @@ func TestIdInit(t *testing.T) {
 			a := id()
 			err := a.Init(r, test.data)
 
-			if test.expectsError && err == nil {
+			switch {
+			case test.expectsError && err == nil:
 				t.Error("expected error")
-			} else if !test.expectsError && err != nil {
+			case !test.expectsError && err != nil:
 				t.Errorf("unexpected error: %s", err.Error())
 			}
 

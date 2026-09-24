@@ -6,7 +6,7 @@
 package engine
 
 import (
-	"github.com/corazawaf/coraza/v3/testing/profile"
+	"github.com/ad3n/coraza/v3/testing/profile"
 )
 
 // These two profiles use the same rules to show the behavioral difference between On and DetectionOnly.

@@ -6,8 +6,8 @@ package experimental
 import (
 	"io"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 type Options = corazawaf.Options

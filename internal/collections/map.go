@@ -7,10 +7,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/internal/corazarules"
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/ad3n/coraza/v3/collection"
+	"github.com/ad3n/coraza/v3/internal/corazarules"
+	"github.com/ad3n/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/types/variables"
 )
 
 // Map is a default collection.Map.
@@ -158,15 +158,19 @@ func (c *Map) Set(key string, values []string) {
 	if !c.isCaseSensitive {
 		key = strings.ToLower(key)
 	}
+
 	dataSlice, exists := c.data[key]
-	if !exists || cap(dataSlice) < len(values) {
+	switch {
+	case !exists || cap(dataSlice) < len(values):
 		dataSlice = make([]keyValue, len(values))
-	} else {
+	default:
 		dataSlice = dataSlice[:len(values)] // Reuse existing slice with the same length
 	}
+
 	for i, v := range values {
 		dataSlice[i] = keyValue{key: originalKey, value: v}
 	}
+
 	c.data[key] = dataSlice
 }
 

@@ -148,7 +148,8 @@ func Test_runTests(t *testing.T) {
 			// Stream 2 events
 			w.Header().Set("Content-Type", "text/event-stream")
 			w.WriteHeader(http.StatusOK)
-			if wf, ok := w.(http.Flusher); ok {
+			switch wf, ok := w.(http.Flusher); {
+			case ok:
 				fmt.Fprint(w, "event: message\n")
 				fmt.Fprint(w, "data: 1\n\n")
 				wf.Flush()
@@ -156,7 +157,7 @@ func Test_runTests(t *testing.T) {
 				fmt.Fprint(w, "event: message\n")
 				fmt.Fprint(w, "data: 2\n\n")
 				wf.Flush()
-			} else {
+			default:
 				t.Fatalf("response writer is not a Flusher")
 			}
 		default:

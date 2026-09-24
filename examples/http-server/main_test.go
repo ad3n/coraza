@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	txhttp "github.com/corazawaf/coraza/v3/http"
+	txhttp "github.com/ad3n/coraza/v3/http"
 )
 
 func setupTestServer(t *testing.T) *httptest.Server {
@@ -102,11 +102,14 @@ func TestHttpServer(t *testing.T) {
 			// Spin up the test server
 			testServer := setupTestServer(t)
 			defer testServer.Close()
-			if tt.body == nil {
+
+			switch {
+			case tt.body == nil:
 				statusCode = doGetRequest(t, testServer.URL+tt.path)
-			} else {
+			default:
 				statusCode = doPostRequest(t, testServer.URL+tt.path, tt.body)
 			}
+
 			if want, have := tt.expStatus, statusCode; want != have {
 				t.Errorf("Unexpected status code, want: %d, have: %d", want, have)
 			}
@@ -132,21 +135,24 @@ func TestHttpServerConcurrent(t *testing.T) {
 	// Spin up the test server with default.conf configuration
 	testServer := setupTestServer(t)
 	defer testServer.Close()
+
 	// a t.Run wraps all the concurrent tests and permits to close the server only once test is done
 	// See https://github.com/golang/go/issues/17791
 	t.Run("concurrent test", func(t *testing.T) {
 		for _, tc := range tests {
 			tt := tc
-			for i := 0; i < 10; i++ {
+			for range 10 {
 				// Each test case is added 10 times and then run concurrently
 				t.Run(tt.name, func(t *testing.T) {
 					t.Parallel()
 					var statusCode int
-					if tt.body == nil {
+					switch {
+					case tt.body == nil:
 						statusCode = doGetRequest(t, testServer.URL+tt.path)
-					} else {
+					default:
 						statusCode = doPostRequest(t, testServer.URL+tt.path, tt.body)
 					}
+
 					if want, have := tt.expStatus, statusCode; want != have {
 						t.Errorf("Unexpected status code, want: %d, have: %d", want, have)
 					}

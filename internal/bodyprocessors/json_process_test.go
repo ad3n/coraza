@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/internal/bodyprocessors"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
 )
 
 // jsonRecursionLimit is a generous nesting limit used by tests that are not

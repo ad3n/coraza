@@ -8,10 +8,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/debuglog"
-	_ "github.com/corazawaf/coraza/v3/testing/engine"
-	"github.com/corazawaf/coraza/v3/testing/profile"
+	"github.com/ad3n/coraza/v3"
+	"github.com/ad3n/coraza/v3/debuglog"
+	_ "github.com/ad3n/coraza/v3/testing/engine"
+	"github.com/ad3n/coraza/v3/testing/profile"
 )
 
 func TestEngine(t *testing.T) {
@@ -38,17 +38,20 @@ func TestEngine(t *testing.T) {
 						for _, mr := range test.transaction.MatchedRules() {
 							debug += fmt.Sprintf(" %d", mr.Rule().ID())
 						}
-						if testing.Verbose() {
+
+						switch {
+						case testing.Verbose():
 							t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s, got:%s\n%s\nREQUEST:\n%s", p.Meta.Name, test.Name, e, debug, test.transaction, test.Request())
-						} else {
+						default:
 							t.Errorf("%s: ERROR: %s", test.Name, e)
 						}
 					}
 
 					for _, e := range test.OutputInterruptionErrors() {
-						if testing.Verbose() {
+						switch {
+						case testing.Verbose():
 							t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s\n %s\nREQUEST:\n%s", p.Meta.Name, test.Name, e, test.transaction, test.Request())
-						} else {
+						default:
 							t.Errorf("%s: ERROR: %s", test.Name, e)
 						}
 					}

@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/collection"
+	"github.com/ad3n/coraza/v3/debuglog"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
 )
 
 type md struct {
@@ -117,6 +117,7 @@ func TestSetvarEvaluate(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			defer logsBuf.Reset()
+
 			a := setvar()
 			metadata := &md{}
 			if err := a.Init(metadata, tt.init); err != nil {
@@ -129,7 +130,8 @@ func TestSetvarEvaluate(t *testing.T) {
 			tx := waf.NewTransaction()
 			a.Evaluate(metadata, tx)
 
-			if tt.expectInvalidSyntaxError {
+			switch {
+			case tt.expectInvalidSyntaxError:
 				t.Log(logsBuf.String())
 				if logsBuf.Len() == 0 {
 					t.Fatal("expected logs")
@@ -142,7 +144,7 @@ func TestSetvarEvaluate(t *testing.T) {
 				if !strings.Contains(logsBuf.String(), warningKeyNotFoundInCollection) {
 					t.Errorf("expected error log containing %q, got %q", warningKeyNotFoundInCollection, logsBuf.String())
 				}
-			} else if logsBuf.Len() != 0 {
+			case logsBuf.Len() != 0:
 				t.Fatalf("unexpected error: %s", logsBuf.String())
 			}
 
@@ -150,11 +152,13 @@ func TestSetvarEvaluate(t *testing.T) {
 				if err := a.Init(metadata, tt.init2); err != nil {
 					t.Fatal("unexpected error during setvar init")
 				}
+
 				a.Evaluate(metadata, tx)
 				if logsBuf.Len() != 0 && !tt.expectInvalidSyntaxError {
 					t.Fatalf("unexpected error: %s", logsBuf.String())
 				}
 			}
+
 			if tt.expectNewVarValue != "" {
 				checkCollectionValue(t, a.(*setvarFn), tx, "newvar", tt.expectNewVarValue)
 			}
@@ -165,19 +169,23 @@ func TestSetvarEvaluate(t *testing.T) {
 func checkCollectionValue(t *testing.T, a *setvarFn, tx plugintypes.TransactionState, key string, expected string) {
 	t.Helper()
 	var col collection.Map
-	if c, ok := tx.Collection(a.collection).(collection.Map); !ok {
+	switch c, ok := tx.Collection(a.collection).(collection.Map); {
+	case !ok:
 		t.Fatal("collection in setvar is not a map")
 		return
-	} else {
+	default:
 		col = c
 	}
+
 	if col == nil {
 		t.Fatal("collection in setvar is nil")
 		return
 	}
+
 	if col == nil {
 		t.Fatal("collection is nil")
 	}
+
 	if col.Get(key)[0] != expected {
 		t.Errorf("key %q: expected %q, got %q", key, expected, col.Get(key))
 	}

@@ -21,7 +21,7 @@ import (
 
 var addLicenseVersion = "v1.1.1" // https://github.com/google/addlicense/releases
 var gosImportsVer = "v0.3.7"     // https://github.com/rinchsan/gosimports/releases
-var golangCILintVer = "v2.6.2"   // https://github.com/golangci/golangci-lint/releases
+var golangCILintVer = "v2.14.0"  // https://github.com/golangci/golangci-lint/releases
 var errNoGitDir = errors.New("no .git directory found")
 var errUpdateGeneratedFiles = errors.New("generated files need to be updated")
 
@@ -52,7 +52,7 @@ func Format() error {
 	return sh.RunV("go", "run", fmt.Sprintf("github.com/rinchsan/gosimports/cmd/gosimports@%s", gosImportsVer),
 		"-w",
 		"-local",
-		"github.com/corazawaf/coraza",
+		"github.com/ad3n/coraza",
 		".")
 }
 

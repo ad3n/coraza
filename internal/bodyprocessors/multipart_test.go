@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/internal/bodyprocessors"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
 )
 
 func multipartProcessor(t *testing.T) plugintypes.BodyProcessor {
@@ -62,16 +62,19 @@ Content-Type: text/html
 	}); err != nil {
 		t.Fatal(err)
 	}
+
 	// first we validate we got the headers
 	headers := v.MultipartPartHeaders()
 	header1 := "Content-Disposition: form-data; name=\"file2\"; filename=\"a.html\""
 	header2 := "Content-Type: text/html"
-	if h := headers.Get("file2"); len(h) == 0 {
+	switch h := headers.Get("file2"); {
+	case len(h) == 0:
 		t.Fatal("expected headers for file2")
-	} else {
+	default:
 		if len(h) != 2 {
 			t.Fatal("expected 2 headers for file2")
 		}
+
 		if (h[0] != header1 && h[0] != header2) || (h[1] != header1 && h[1] != header2) {
 			t.Fatalf("Got invalid multipart headers")
 		}
@@ -280,16 +283,19 @@ Content-Type: text/html
 			}); err != nil {
 				t.Fatal(err)
 			}
+
 			// first we validate we got the headers
 			headers := v.MultipartPartHeaders()
 			header1 := "Content-Disposition: form-data; name=\"file1\"; filename=\"a.txt\""
 			header2 := "Content-Type: text/plain"
-			if h := headers.Get("file1"); len(h) == 0 {
+			switch h := headers.Get("file1"); {
+			case len(h) == 0:
 				t.Fatal("expected headers for file1")
-			} else {
+			default:
 				if len(h) != 2 {
 					t.Fatal("expected 2 headers for file1")
 				}
+
 				if (h[0] != header1 && h[0] != header2) || (h[1] != header1 && h[1] != header2) {
 					t.Fatalf("Got invalid multipart headers")
 				}
@@ -297,9 +303,10 @@ Content-Type: text/html
 
 			// Verify form field data was correctly processed before the incomplete part
 			argsPost := v.ArgsPost()
-			if textValues := argsPost.Get("text"); len(textValues) == 0 {
+			switch textValues := argsPost.Get("text"); {
+			case len(textValues) == 0:
 				t.Fatal("expected ArgsPost to contain 'text' field")
-			} else if textValues[0] != "text default" {
+			case textValues[0] != "text default":
 				t.Fatalf("expected ArgsPost 'text' to be 'text default', got %q", textValues[0])
 			}
 		})
@@ -324,9 +331,10 @@ text defa`)
 
 	// Verify the partial form field data was processed
 	argsPost := v.ArgsPost()
-	if textValues := argsPost.Get("text"); len(textValues) == 0 {
+	switch textValues := argsPost.Get("text"); {
+	case len(textValues) == 0:
 		t.Fatal("expected ArgsPost to contain 'text' field")
-	} else if textValues[0] != "text defa" {
+	case textValues[0] != "text defa":
 		t.Fatalf("expected ArgsPost 'text' to be 'text defa', got %q", textValues[0])
 	}
 }

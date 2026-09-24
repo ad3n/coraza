@@ -13,13 +13,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/auditlog"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/environment"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/debuglog"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/internal/auditlog"
+	"github.com/ad3n/coraza/v3/internal/corazawaf"
+	"github.com/ad3n/coraza/v3/internal/environment"
+	utils "github.com/ad3n/coraza/v3/internal/strings"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 // DirectiveOptions contains the parsed options for a directive. It is mutable and propagated
@@ -197,23 +197,29 @@ func directiveSecRule(options *DirectiveOptions) error {
 	})
 	if err != nil && !ignoreErrors {
 		return err
-	} else if err != nil && ignoreErrors {
+	}
+
+	if err != nil && ignoreErrors {
 		options.WAF.Logger.Debug().
 			Str("rule_id", options.Opts).
 			Err(err).
 			Msg("Ignoring rule compilation error")
 		return nil
 	}
+
 	err = options.WAF.Rules.Add(rule)
 	if err != nil && !ignoreErrors {
 		return err
-	} else if err != nil && ignoreErrors {
+	}
+
+	if err != nil && ignoreErrors {
 		options.WAF.Logger.Debug().
 			Str("rule_id", options.Opts).
 			Err(err).
 			Msg("Ignoring rule compilation error")
 		return nil
 	}
+
 	return nil
 }
 
@@ -475,17 +481,19 @@ func directiveSecRuleRemoveByID(options *DirectiveOptions) error {
 
 	idsOrRanges := strings.Fields(options.Opts)
 	for _, idOrRange := range idsOrRanges {
-		if idx := strings.Index(idOrRange, "-"); idx == -1 {
+		switch idx := strings.Index(idOrRange, "-"); {
+		case idx == -1:
 			id, err := strconv.Atoi(idOrRange)
 			if err != nil {
 				return err
 			}
 
 			options.WAF.Rules.DeleteByID(id)
-		} else {
+		default:
 			if idx == 0 {
 				return fmt.Errorf("SecRuleRemoveById: invalid negative id: %s", idOrRange)
 			}
+
 			start, err := strconv.Atoi(idOrRange[:idx])
 			if err != nil {
 				return err
@@ -1313,13 +1321,15 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	if environment.HasAccessToFS {
+	switch {
+	case environment.HasAccessToFS:
 		if err := environment.IsDirWritable(options.Opts); err != nil {
 			return fmt.Errorf("filesystem access check: %w. Check SecUploadDir provided dir: %s", err, options.Opts)
 		}
-	} else {
+	default:
 		return fmt.Errorf("SecUploadDir directive is not effective because of no access to the filesystem")
 	}
+
 	options.WAF.UploadDir = options.Opts
 	return nil
 }
@@ -1423,19 +1433,23 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 	if length < 2 {
 		return errors.New("syntax error: SecRuleUpdateTargetById id \"VARIABLES\"")
 	}
+
 	// The last element is expected to be the variable(s)
 	variables := idsOrRanges[length-1]
 	for _, idOrRange := range idsOrRanges[:length-1] {
-		if idx := strings.Index(idOrRange, "-"); idx == -1 {
+		switch idx := strings.Index(idOrRange, "-"); {
+		case idx == -1:
 			id, err := strconv.Atoi(idOrRange)
 			if err != nil {
 				return err
 			}
+
 			return updateTargetBySingleID(id, variables, options)
-		} else {
+		default:
 			if idx == 0 {
 				return fmt.Errorf("SecRuleUpdateTargetById: invalid negative id: %s", idOrRange)
 			}
+
 			start, err := strconv.Atoi(idOrRange[:idx])
 			if err != nil {
 				return err
@@ -1445,9 +1459,11 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 			if err != nil {
 				return err
 			}
+
 			if start == end {
 				return updateTargetBySingleID(start, variables, options)
 			}
+
 			if start > end {
 				return fmt.Errorf("invalid range: %s", idOrRange)
 			}
@@ -1472,6 +1488,7 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -1524,19 +1541,23 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 	if idsOrRangesLen < 2 {
 		return errors.New("syntax error: SecRuleUpdateActionById id \"ACTION1,ACTION2,...\"")
 	}
+
 	// The last element is expected to be the action(s)
 	actions := idsOrRanges[idsOrRangesLen-1]
 	for _, idOrRange := range idsOrRanges[:idsOrRangesLen-1] {
-		if idx := strings.Index(idOrRange, "-"); idx == -1 {
+		switch idx := strings.Index(idOrRange, "-"); {
+		case idx == -1:
 			id, err := strconv.Atoi(idOrRange)
 			if err != nil {
 				return err
 			}
+
 			return updateActionBySingleID(id, actions, options)
-		} else {
+		default:
 			if idx == 0 {
 				return fmt.Errorf("SecRuleUpdateActionById: invalid negative id: %s", idOrRange)
 			}
+
 			start, err := strconv.Atoi(idOrRange[:idx])
 			if err != nil {
 				return err
@@ -1546,9 +1567,11 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 			if err != nil {
 				return err
 			}
+
 			if start == end {
 				return updateActionBySingleID(start, actions, options)
 			}
+
 			if start > end {
 				return fmt.Errorf("invalid range: %s", idOrRange)
 			}
@@ -1589,6 +1612,7 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 			}
 		}
 	}
+
 	return nil
 }
 

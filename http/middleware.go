@@ -13,9 +13,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/experimental"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3"
+	"github.com/ad3n/coraza/v3/experimental"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 // processRequest fills all transaction variables from an http.Request object
@@ -136,10 +136,11 @@ func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 		// ProcessRequest is just a wrapper around ProcessConnection, ProcessURI,
 		// ProcessRequestHeaders and ProcessRequestBody.
 		// It fails if any of these functions returns an error and it stops on interruption.
-		if it, err := processRequest(tx, r); err != nil {
+		switch it, err := processRequest(tx, r); {
+		case err != nil:
 			tx.DebugLogger().Error().Err(err).Msg("Failed to process request")
 			return
-		} else if it != nil {
+		case it != nil:
 			w.WriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, http.StatusOK))
 			return
 		}

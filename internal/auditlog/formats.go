@@ -25,9 +25,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	utils "github.com/ad3n/coraza/v3/internal/strings"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 type nativeFormatter struct{}

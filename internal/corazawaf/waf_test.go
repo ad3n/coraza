@@ -8,8 +8,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/environment"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/internal/environment"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 func TestNewTransaction(t *testing.T) {
@@ -169,11 +169,12 @@ func TestValidate(t *testing.T) {
 			waf := NewWAF()
 			tCase.customizer(waf)
 			err := waf.Validate()
-			if tCase.expectErr {
+			switch {
+			case tCase.expectErr:
 				if err == nil {
 					t.Fatalf("expected error: %s", err.Error())
 				}
-			} else {
+			default:
 				if err != nil {
 					t.Fatalf("unexpected error: %s", err.Error())
 				}

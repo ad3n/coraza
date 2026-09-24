@@ -220,6 +220,7 @@ func ApplyAuditLogParts(base AuditLogParts, modification string) (AuditLogParts,
 		if p == 'A' || p == 'Z' {
 			return nil, fmt.Errorf("audit log parts A and Z are mandatory and cannot be modified")
 		}
+
 		if !slices.Contains(orderedAuditLogParts, AuditLogPart(p)) {
 			return nil, fmt.Errorf("invalid audit log part %q", p)
 		}
@@ -231,12 +232,13 @@ func ApplyAuditLogParts(base AuditLogParts, modification string) (AuditLogParts,
 		partsMap[p] = struct{}{}
 	}
 
-	if isAddition {
+	switch {
+	case isAddition:
 		// Add new parts
 		for _, p := range partsToModify {
 			partsMap[AuditLogPart(p)] = struct{}{}
 		}
-	} else {
+	default:
 		// Remove parts
 		for _, p := range partsToModify {
 			delete(partsMap, AuditLogPart(p))

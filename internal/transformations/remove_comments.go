@@ -14,7 +14,8 @@ func removeComments(value string) (string, bool, error) {
 
 charLoop:
 	for i < inputLen {
-		if !incomment {
+		switch {
+		case !incomment:
 			switch {
 			case (input[i] == '/') && (i+1 < inputLen) && (input[i+1] == '*'):
 				incomment = true
@@ -37,7 +38,7 @@ charLoop:
 				i++
 				j++
 			}
-		} else {
+		default:
 			switch {
 			case (input[i] == '*') && (i+1 < inputLen) && (input[i+1] == '/'):
 				incomment = false
@@ -62,5 +63,6 @@ charLoop:
 		input[j] = ' '
 		j++
 	}
+
 	return string(input[0:j]), changed, nil
 }

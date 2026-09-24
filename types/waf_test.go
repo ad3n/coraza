@@ -21,11 +21,12 @@ func TestParseAuditLogParts(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.input, func(t *testing.T) {
 			parts, err := ParseAuditLogParts(test.input)
-			if test.expectedHasError {
+			switch {
+			case test.expectedHasError:
 				if err == nil {
 					t.Error("expected error")
 				}
-			} else {
+			default:
 				if err != nil {
 					t.Error("unexpected error")
 				}
@@ -176,11 +177,12 @@ func TestApplyAuditLogParts(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			parts, err := ApplyAuditLogParts(test.base, test.modification)
-			if test.expectedHasError {
+			switch {
+			case test.expectedHasError:
 				if err == nil {
 					t.Error("expected error")
 				}
-			} else {
+			default:
 				if err != nil {
 					t.Errorf("unexpected error: %v", err)
 				}
@@ -194,6 +196,7 @@ func TestApplyAuditLogParts(t *testing.T) {
 						t.Errorf("missing part at index %d, want %q", i, part)
 						continue
 					}
+
 					if want, have := part, parts[i]; want != have {
 						t.Errorf("unexpected part at index %d, want %q, have %q", i, want, have)
 					}

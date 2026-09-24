@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tidwall/gjson"
+	"github.com/ad3n/gjson"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type jsonBodyProcessor struct{}
@@ -108,13 +108,15 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, res map[strin
 		// DoS attacks using deeply nested JSON structures (e.g., {"a":{"a":{"a":...}}}).
 		return errors.New("max recursion reached while reading json object")
 	}
+
 	json.ForEach(func(key, value gjson.Result) bool {
 		// Avoid string concatenation to maintain a single buffer for key aggregation.
 		prevParentLength := len(objKey)
 		objKey = append(objKey, '.')
-		if key.Type == gjson.String {
+		switch {
+		case key.Type == gjson.String:
 			objKey = append(objKey, key.Str...)
-		} else {
+		default:
 			objKey = strconv.AppendInt(objKey, int64(key.Num), 10)
 			arrayLen++
 		}
@@ -127,6 +129,7 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, res map[strin
 			if iterationError != nil {
 				return false
 			}
+
 			objKey = objKey[:prevParentLength]
 			return true
 		case gjson.String:
@@ -146,6 +149,7 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, res map[strin
 	if arrayLen > 0 {
 		res[string(objKey)] = strconv.Itoa(arrayLen)
 	}
+
 	return iterationError
 }
 

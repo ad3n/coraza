@@ -6,7 +6,7 @@ package engine
 import (
 	"crypto/fips140"
 
-	"github.com/corazawaf/coraza/v3/testing/profile"
+	"github.com/ad3n/coraza/v3/testing/profile"
 )
 
 // Rules 777 and 778 rely on t:md5, which is unavailable when the binary runs in FIPS 140-3 mode:

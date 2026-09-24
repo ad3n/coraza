@@ -33,9 +33,10 @@ func loadFromFile(filepath string, dirs []string, root fs.FS) ([]byte, error) {
 		absFilepath := path.Join(p, filepath)
 		content, err = fs.ReadFile(root, absFilepath)
 		if err != nil {
-			if os.IsNotExist(err) {
+			switch {
+			case os.IsNotExist(err):
 				continue
-			} else {
+			default:
 				return nil, err
 			}
 		}

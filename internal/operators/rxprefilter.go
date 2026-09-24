@@ -96,12 +96,14 @@ func minLen(re *syntax.Regexp) int {
 		// inputs that the regex would actually match.
 		n := 0
 		for _, r := range re.Rune {
-			if r == utf8.RuneError {
+			switch {
+			case r == utf8.RuneError:
 				n++
-			} else {
+			default:
 				n += utf8.RuneLen(r)
 			}
 		}
+
 		return n
 	case syntax.OpAnyCharNotNL, syntax.OpAnyChar, syntax.OpCharClass:
 		// Any single character match requires at least 1 byte.
@@ -115,6 +117,7 @@ func minLen(re *syntax.Regexp) int {
 		for _, sub := range re.Sub {
 			n += minLen(sub)
 		}
+
 		return n
 	case syntax.OpAlternate:
 		// Only one branch needs to match, so take the shortest branch.
@@ -123,12 +126,14 @@ func minLen(re *syntax.Regexp) int {
 		if len(re.Sub) == 0 {
 			return 0
 		}
+
 		m := minLen(re.Sub[0])
 		for _, sub := range re.Sub[1:] {
 			if v := minLen(sub); v < m {
 				m = v
 			}
 		}
+
 		return m
 	case syntax.OpQuest, syntax.OpStar:
 		// ? and * can match zero repetitions.
@@ -144,6 +149,7 @@ func minLen(re *syntax.Regexp) int {
 		if re.Min == 0 {
 			return 0
 		}
+
 		return re.Min * minLen(re.Sub[0])
 	default:
 		// Unknown ops (e.g. OpBeginLine, OpEndLine) don't consume input.
@@ -159,6 +165,7 @@ func prefilterFunc(pattern string) func(string) bool {
 	if err != nil {
 		return nil
 	}
+
 	re = re.Simplify()
 
 	caseInsensitive := hasFlag(re, syntax.FoldCase)
@@ -185,6 +192,7 @@ func prefilterFunc(pattern string) func(string) bool {
 		if mml >= minUsefulMML {
 			return func(s string) bool { return len(s) >= mml }
 		}
+
 		return nil
 	}
 
@@ -207,14 +215,17 @@ func prefilterFunc(pattern string) func(string) bool {
 		if len(v) > 0 {
 			origFirst = v[0]
 		}
+
 		origLast := ""
 		if len(v) > 0 {
 			origLast = v[len(v)-1]
 		}
+
 		filtered := filterShort(v, 2)
 		if len(filtered) == 0 {
 			return nil
 		}
+
 		// A literal is the prefix/suffix constraint only when it survived
 		// filterShort (len >= 2), meaning it IS the first/last literal in the
 		// pattern and not replaced by a longer one that appeared elsewhere.
@@ -224,6 +235,7 @@ func prefilterFunc(pattern string) func(string) bool {
 			// No anchor: sort longest-first for best early exit.
 			slices.SortFunc(filtered, func(a, b string) int { return len(b) - len(a) })
 		}
+
 		pf = buildMultiNeedlePF(filtered, caseInsensitive, usePrefix, useSuffix)
 
 	case combinedRequired:
@@ -242,15 +254,17 @@ func prefilterFunc(pattern string) func(string) bool {
 		if anyTooShort(v, 2) {
 			return nil
 		}
+
 		filtered := v
 		switch {
 		case len(filtered) == 1:
 			needle := filtered[0]
-			if caseInsensitive {
+			switch {
+			case caseInsensitive:
 				pf = func(s string) bool {
 					return containsFoldASCII(s, needle)
 				}
-			} else {
+			default:
 				pf = func(s string) bool {
 					return strings.Contains(s, needle)
 				}
@@ -313,6 +327,7 @@ func prefilterFunc(pattern string) func(string) bool {
 			if !isASCII(s) {
 				return true
 			}
+
 			return inner(s)
 		}
 	}
@@ -344,17 +359,16 @@ type combinedRequired struct {
 //
 // The ci parameter controls case-insensitive mode: when true, extracted
 // literals are lowercased so the caller can compare case-insensitively.
-func extractLiterals(re *syntax.Regexp, ci bool) interface{} {
+func extractLiterals(re *syntax.Regexp, ci bool) any {
 	switch re.Op {
 	case syntax.OpLiteral:
 		// U+FFFD in a literal matches single invalid UTF-8 bytes in Go's regexp,
 		// but strings.Contains searches for the 3-byte encoding. Bail out to
 		// avoid false negatives.
-		for _, r := range re.Rune {
-			if r == utf8.RuneError {
-				return nil
-			}
+		if slices.Contains(re.Rune, utf8.RuneError) {
+			return nil
 		}
+
 		s := string(re.Rune)
 		if ci {
 			s = strings.ToLower(s)
@@ -660,11 +674,11 @@ func rawLiteral(re *syntax.Regexp, ci bool) string {
 	if re.Op != syntax.OpLiteral {
 		return ""
 	}
-	for _, r := range re.Rune {
-		if r == utf8.RuneError {
-			return ""
-		}
+
+	if slices.Contains(re.Rune, utf8.RuneError) {
+		return ""
 	}
+
 	s := string(re.Rune)
 	if ci {
 		s = strings.ToLower(s)
@@ -778,10 +792,7 @@ func newIndexedMatcher(needles []string, ci bool) *indexedMatcher {
 		}
 	}
 
-	ml := im.minLen
-	if ml > 255 {
-		ml = 255
-	}
+	ml := min(im.minLen, 255)
 	for i := range im.shift {
 		im.shift[i] = uint8(ml)
 	}
@@ -1116,10 +1127,12 @@ func buildCombinedPF(v combinedRequired, ci bool, re *syntax.Regexp) func(string
 	if len(allSlice) > 0 {
 		origFirst = allSlice[0]
 	}
+
 	origLast := ""
 	if len(allSlice) > 0 {
 		origLast = allSlice[len(allSlice)-1]
 	}
+
 	filteredAll := filterShort(allSlice, 2)
 
 	var allPF func(string) bool
@@ -1129,6 +1142,7 @@ func buildCombinedPF(v combinedRequired, ci bool, re *syntax.Regexp) func(string
 		if !usePrefix && !useSuffix {
 			slices.SortFunc(filteredAll, func(a, b string) int { return len(b) - len(a) })
 		}
+
 		allPF = buildMultiNeedlePF(filteredAll, ci, usePrefix, useSuffix)
 	}
 
@@ -1143,9 +1157,10 @@ func buildCombinedPF(v combinedRequired, ci bool, re *syntax.Regexp) func(string
 	switch {
 	case len(filteredAny) == 1:
 		needle := filteredAny[0]
-		if ci {
+		switch {
+		case ci:
 			anyPF = func(s string) bool { return containsFoldASCII(s, needle) }
-		} else {
+		default:
 			anyPF = func(s string) bool { return strings.Contains(s, needle) }
 		}
 	case len(filteredAny) <= anyRequiredMaxN:
@@ -1159,6 +1174,7 @@ func buildCombinedPF(v combinedRequired, ci bool, re *syntax.Regexp) func(string
 	if allPF == nil {
 		return anyPF
 	}
+
 	outerPF := allPF
 	return func(s string) bool { return outerPF(s) && anyPF(s) }
 }
@@ -1190,10 +1206,10 @@ func extractExactMatch(re *syntax.Regexp) (lit string, ci bool) {
 	if middle.Op != syntax.OpLiteral {
 		return "", false
 	}
-	for _, r := range middle.Rune {
-		if r == utf8.RuneError {
-			return "", false
-		}
+
+	if slices.Contains(middle.Rune, utf8.RuneError) {
+		return "", false
 	}
+
 	return string(middle.Rune), middle.Flags&syntax.FoldCase != 0
 }

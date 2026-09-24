@@ -6,7 +6,7 @@ package transformations
 import (
 	"unicode/utf8"
 
-	"github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/ad3n/coraza/v3/internal/strings"
 )
 
 func compressWhitespace(value string) (string, bool, error) {
@@ -32,20 +32,24 @@ func doCompressWhitespace(input string, pos int) (string, bool) {
 		// Å, ą, 你). Byte-level matching corrupted those characters by
 		// matching on that trailing byte alone.
 		r, size := utf8.DecodeRuneInString(input[i:])
-		if isLatinSpace(r) || input[i] == rawNBSP {
-			if inWhiteSpace {
+		switch {
+		case isLatinSpace(r) || input[i] == rawNBSP:
+			switch {
+			case inWhiteSpace:
 				changed = true
-			} else {
+			default:
 				inWhiteSpace = true
 				if r != ' ' {
 					changed = true
 				}
+
 				ret = append(ret, ' ')
 			}
-		} else {
+		default:
 			inWhiteSpace = false
 			ret = append(ret, input[i:i+size]...)
 		}
+
 		i += size
 	}
 

@@ -6,7 +6,7 @@ package transformations
 import (
 	"encoding/hex"
 
-	"github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/ad3n/coraza/v3/internal/strings"
 )
 
 func hexDecode(data string) (string, bool, error) {

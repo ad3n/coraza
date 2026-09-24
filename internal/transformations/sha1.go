@@ -9,7 +9,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/ad3n/coraza/v3/internal/strings"
 )
 
 // errSHA1NotAvailableFIPS is returned on every evaluation of a rule using t:sha1 when the binary

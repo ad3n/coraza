@@ -1,11 +1,11 @@
-module github.com/corazawaf/coraza/v3/testing/coreruleset
+module github.com/ad3n/coraza/v3/testing/coreruleset
 
-go 1.25.0
+go 1.26.0
 
 require (
+	github.com/ad3n/coraza/v3 v3.7.0
 	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/corazawaf/coraza-coreruleset/v4 v4.25.0
-	github.com/corazawaf/coraza/v3 v3.7.0
 	github.com/coreruleset/albedo v0.3.0
 	github.com/coreruleset/go-ftw/v2 v2.5.0
 	github.com/rs/zerolog v1.35.0
@@ -16,7 +16,8 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
-	github.com/corazawaf/libinjection-go v0.3.2 // indirect
+	github.com/ad3n/gjson v1.0.0 // indirect
+	github.com/corazawaf/libinjection-go v0.3.3 // indirect
 	github.com/coreruleset/ftw-tests-schema/v2 v2.3.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
@@ -44,7 +45,6 @@ require (
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20250424160509-463d218d4745 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
-	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/valllabh/ocsf-schema-golang v1.0.3 // indirect
@@ -63,4 +63,4 @@ require (
 	rsc.io/binaryregexp v0.2.0 // indirect
 )
 
-replace github.com/corazawaf/coraza/v3 => ../../
+replace github.com/ad3n/coraza/v3 => ../../

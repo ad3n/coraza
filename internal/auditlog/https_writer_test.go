@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 var sampleHttpsAuditLog = &Log{

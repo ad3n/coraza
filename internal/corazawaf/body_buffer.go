@@ -9,8 +9,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/corazawaf/coraza/v3/internal/environment"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/ad3n/coraza/v3/internal/environment"
+	"github.com/ad3n/coraza/v3/types"
 )
 
 // BodyBuffer is used to read RequestBody and ResponseBody objects
@@ -60,6 +60,7 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 		// that have to perform limit checks before calling Write()
 		return 0, errors.New("limit reached while writing")
 	}
+
 	targetLen := br.length + int64(len(data))
 
 	// Check if memory limits are reached
@@ -73,21 +74,25 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 		if !environment.HasAccessToFS {
 			// TinyGo MemoryLimit should be equal to Limit. Therefore, Write function has been called without Limit check.
 			return 0, errors.New("memoryLimit reached while writing")
-		} else {
-			if br.writer == nil {
-				br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
-				if err != nil {
-					return 0, err
-				}
-				// we dump the previous buffer
-				if _, err := br.writer.Write(br.buffer.Bytes()); err != nil {
-					return 0, err
-				}
-				br.buffer.Reset()
-			}
-			br.length = targetLen
-			return br.writer.Write(data)
 		}
+
+		if br.writer == nil {
+			br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
+			if err != nil {
+				return 0, err
+			}
+
+			// we dump the previous buffer
+			if _, err := br.writer.Write(br.buffer.Bytes()); err != nil {
+				return 0, err
+			}
+
+			br.buffer.Reset()
+		}
+
+		br.length = targetLen
+		return br.writer.Write(data)
+
 	}
 
 	br.length = targetLen

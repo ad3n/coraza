@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/testing/profile"
+	"github.com/ad3n/coraza/v3"
+	"github.com/ad3n/coraza/v3/testing/profile"
 )
 
 func TestOutputInterruptionErrors_NoInterruptionExpectedButGot(t *testing.T) {

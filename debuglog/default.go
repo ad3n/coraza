@@ -22,9 +22,10 @@ func (e *defaultEvent) Msg(msg string) {
 		return
 	}
 
-	if len(e.fields) == 0 {
+	switch {
+	case len(e.fields) == 0:
 		e.printer(e.level, msg, "")
-	} else {
+	default:
 		// if event has fields, there serialization starts with a
 		// trailing space.
 		e.printer(e.level, msg, string(e.fields[1:]))
@@ -55,11 +56,13 @@ func (e *defaultEvent) Bool(key string, b bool) Event {
 	e.fields = append(e.fields, ' ')
 	e.fields = append(e.fields, key...)
 	e.fields = append(e.fields, '=')
-	if b {
+	switch {
+	case b:
 		e.fields = append(e.fields, "true"...)
-	} else {
+	default:
 		e.fields = append(e.fields, "false"...)
 	}
+
 	return e
 }
 

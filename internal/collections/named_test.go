@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/ad3n/coraza/v3/types/variables"
 )
 
 func TestNamedCollection(t *testing.T) {

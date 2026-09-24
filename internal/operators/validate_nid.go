@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type validateNidFunction = func(input string) bool
@@ -91,6 +91,7 @@ func nidCl(nid string) bool {
 	if len(nid) < 8 {
 		return false
 	}
+
 	nid = strings.ToLower(nid)
 	nid = nonDigitOrK.ReplaceAllString(nid, "")
 	rut, _ := strconv.Atoi(nid[:len(nid)-1])
@@ -101,9 +102,10 @@ func nidCl(nid string) bool {
 	var ndv string
 	for ; rut != 0; rut /= 10 {
 		sum += rut % 10 * factor
-		if factor == 7 {
+		switch {
+		case factor == 7:
 			factor = 2
-		} else {
+		default:
 			factor++
 		}
 	}
@@ -117,6 +119,7 @@ func nidCl(nid string) bool {
 	default:
 		ndv = strconv.Itoa(11 - val)
 	}
+
 	return ndv == dv
 }
 
