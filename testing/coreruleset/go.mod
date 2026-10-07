@@ -3,7 +3,7 @@ module github.com/ad3n/coraza/v3/testing/coreruleset
 go 1.26.0
 
 require (
-	github.com/ad3n/coraza/v3 v3.7.0
+	github.com/ad3n/coraza/v3 v3.8.1
 	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/corazawaf/coraza-coreruleset/v4 v4.25.0
 	github.com/coreruleset/albedo v0.3.0
