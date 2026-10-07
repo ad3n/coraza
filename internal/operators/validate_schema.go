@@ -15,7 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kaptinlin/jsonschema"
+	"github.com/ad3n/jsonschema"
 
 	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/ad3n/coraza/v3/types"
