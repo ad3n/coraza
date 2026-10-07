@@ -179,19 +179,19 @@ func (c *wafConfig) clone() *wafConfig {
 
 func (c *wafConfig) WithRequestBodyLimit(limit int) WAFConfig {
 	ret := c.clone()
-	ret.requestBodyLimit = &limit
+	ret.requestBodyLimit = new(limit)
 	return ret
 }
 
 func (c *wafConfig) WithRequestBodyInMemoryLimit(limit int) WAFConfig {
 	ret := c.clone()
-	ret.requestBodyInMemoryLimit = &limit
+	ret.requestBodyInMemoryLimit = new(limit)
 	return ret
 }
 
 func (c *wafConfig) WithResponseBodyLimit(limit int) WAFConfig {
 	ret := c.clone()
-	ret.responseBodyLimit = &limit
+	ret.responseBodyLimit = new(limit)
 	return ret
 }
 

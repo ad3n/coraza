@@ -2833,3 +2833,35 @@ func BenchmarkRuleEvalWithRemovedRules(b *testing.B) {
 		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
 	}
 }
+
+func BenchmarkTransactionBodyRead(b *testing.B) {
+	for _, response := range []bool{false, true} {
+		b.Run(strconv.FormatBool(response), func(b *testing.B) {
+			waf := NewWAF()
+			waf.RequestBodyAccess = true
+			waf.ResponseBodyAccess = true
+			data := strings.Repeat("x", 65536)
+			reader := strings.NewReader(data)
+			b.ReportAllocs()
+			b.SetBytes(int64(len(data)))
+
+			for b.Loop() {
+				tx := waf.NewTransactionWithOptions(Options{ID: "benchmark"})
+				reader.Reset(data)
+				read := tx.ReadRequestBodyFrom
+				if response {
+					read = tx.ReadResponseBodyFrom
+				}
+
+				interruption, n, err := read(reader)
+				if err != nil || interruption != nil || n != len(data) {
+					b.Fatalf("body read = %v, %d, %v", interruption, n, err)
+				}
+
+				if err := tx.Close(); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}

@@ -4,10 +4,14 @@
 package corazawaf
 
 import (
+	"bytes"
+	"errors"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
+	"testing/iotest"
 
 	"github.com/ad3n/coraza/v3/internal/environment"
 	"github.com/ad3n/coraza/v3/types"
@@ -73,27 +77,66 @@ func TestBodyReaderFile(t *testing.T) {
 }
 
 func TestBodyReaderWriteFromReader(t *testing.T) {
-	br := NewBodyBuffer(types.BodyBufferOptions{
-		TmpPath:     t.TempDir(),
-		MemoryLimit: 5,
-		Limit:       5,
-	})
-	b := strings.NewReader("test")
-	if _, err := io.Copy(br, b); err != nil {
-		t.Error(err)
+	waf := NewWAF()
+	tests := []struct {
+		name        string
+		input       string
+		limit       int64
+		memoryLimit int64
+		want        string
+		wantErr     error
+		readerError bool
+	}{
+		{name: "memory", input: "test", limit: 4, memoryLimit: 5, want: "test"},
+		{name: "short reader", input: "x", limit: 5, memoryLimit: 5, want: "x", wantErr: io.EOF},
+		{name: "limited", input: "secret", limit: 2, memoryLimit: 5, want: "se"},
+		{name: "empty", limit: 0, memoryLimit: 5},
+		{name: "negative", input: "test", limit: -1, memoryLimit: 5},
+		{name: "file", input: "test", limit: 4, memoryLimit: 1, want: "test"},
+		{name: "reader error", limit: 4, memoryLimit: 5, readerError: true, wantErr: io.ErrUnexpectedEOF},
 	}
-	buf := new(strings.Builder)
-	reader, err := br.Reader()
-	if err != nil {
-		t.Error(err)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.memoryLimit < int64(len(tt.want)) && !environment.HasAccessToFS {
+				return
+			}
+
+			br := NewBodyBuffer(types.BodyBufferOptions{
+				TmpPath: t.TempDir(), MemoryLimit: tt.memoryLimit, Limit: 5,
+			})
+			defer func() {
+				if err := br.Reset(); err != nil {
+					t.Error(err)
+				}
+			}()
+
+			src := strings.NewReader(tt.input)
+			var input io.Reader = src
+			if tt.readerError {
+				input = iotest.ErrReader(io.ErrUnexpectedEOF)
+			}
+
+			n, err := waf.copyBodyN(br, input, tt.limit)
+			if n != int64(len(tt.want)) || !errors.Is(err, tt.wantErr) {
+				t.Fatalf("copy = %d, %v; want %d, %v", n, err, len(tt.want), tt.wantErr)
+			}
+
+			if src.Len() != len(tt.input)-len(tt.want) {
+				t.Fatal("read beyond the requested limit")
+			}
+
+			reader, err := br.Reader()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			data, err := io.ReadAll(reader)
+			if err != nil || string(data) != tt.want {
+				t.Fatalf("body = %q, %v; want %q", data, err, tt.want)
+			}
+		})
 	}
-	if _, err := io.Copy(buf, reader); err != nil {
-		t.Error(err)
-	}
-	if buf.String() != "test" {
-		t.Error("Failed to write bodyreader from io.Reader")
-	}
-	_ = br.Reset()
 }
 
 func TestWriteLimit(t *testing.T) {
@@ -172,5 +215,80 @@ func TestBodyBufferResetAndReadTheReader(t *testing.T) {
 	}
 	if nCopied != 0 {
 		t.Fatalf("unexpected number of bytes read, want: %d, have: %d", 5, nCopied)
+	}
+}
+
+func BenchmarkBodyCopy(b *testing.B) {
+	for _, size := range []int{1024, 65536} {
+		b.Run(strconv.Itoa(size), func(b *testing.B) {
+			for _, pooled := range []bool{false, true} {
+				b.Run(strconv.FormatBool(pooled), func(b *testing.B) {
+					waf := NewWAF()
+					body := NewBodyBuffer(types.BodyBufferOptions{MemoryLimit: 1 << 20, Limit: 1 << 20})
+					data := bytes.Repeat([]byte("x"), size)
+					reader := bytes.NewReader(data)
+					copyBody := func() (int64, error) {
+						return io.CopyN(body, reader, int64(size))
+					}
+
+					if pooled {
+						copyBody = func() (int64, error) {
+							return waf.copyBodyN(body, reader, int64(size))
+						}
+					}
+
+					b.ReportAllocs()
+					b.SetBytes(int64(size))
+
+					for b.Loop() {
+						reader.Reset(data)
+						n, err := copyBody()
+						if err != nil || n != int64(size) {
+							b.Fatalf("copy = %d, %v", n, err)
+						}
+
+						if err := body.Reset(); err != nil {
+							b.Fatal(err)
+						}
+					}
+				})
+			}
+
+			b.Run("parallel", func(b *testing.B) {
+				for _, pooled := range []bool{false, true} {
+					b.Run(strconv.FormatBool(pooled), func(b *testing.B) {
+						waf := NewWAF()
+						data := bytes.Repeat([]byte("x"), size)
+						b.ReportAllocs()
+						b.SetBytes(int64(size))
+						b.RunParallel(func(pb *testing.PB) {
+							body := NewBodyBuffer(types.BodyBufferOptions{MemoryLimit: 1 << 20, Limit: 1 << 20})
+							reader := bytes.NewReader(data)
+							for pb.Next() {
+								reader.Reset(data)
+								copyBody := func() (int64, error) {
+									return io.CopyN(body, reader, int64(size))
+								}
+
+								if pooled {
+									copyBody = func() (int64, error) {
+										return waf.copyBodyN(body, reader, int64(size))
+									}
+								}
+
+								n, err := copyBody()
+								if err != nil || n != int64(size) || !bytes.Equal(body.buffer.Bytes(), data) {
+									b.Fatalf("concurrent body copy = %d, %v", n, err)
+								}
+
+								if err := body.Reset(); err != nil {
+									b.Fatal(err)
+								}
+							}
+						})
+					})
+				}
+			})
+		})
 	}
 }

@@ -53,7 +53,8 @@ const (
 // All WAF instance fields are immutable, if you update any
 // of them in runtime you might create concurrency issues
 type WAF struct {
-	txPool sync.Pool
+	txPool       sync.Pool
+	bodyCopyPool sync.Pool
 
 	// ruleGroup object, contains all rules and helpers
 	Rules RuleGroup
@@ -262,7 +263,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	}
 
 	// set capture variables
-	for i := 0; i <= 10; i++ {
+	for i := range 11 {
 		is := strconv.Itoa(i)
 		tx.variables.tx.Set(is, []string{""})
 	}
@@ -334,7 +335,8 @@ func NewWAF() *WAF {
 
 	waf := &WAF{
 		// Initializing pool for transactions
-		txPool: sync.NewPool(func() any { return new(Transaction) }),
+		txPool:       sync.NewPool(func() any { return new(Transaction) }),
+		bodyCopyPool: sync.NewPool(func() any { return new(bodyCopyState{}) }),
 		// These defaults are unavoidable as they are zero values for the variables
 		RuleEngine:                 types.RuleEngineOn,
 		RequestBodyAccess:          false,

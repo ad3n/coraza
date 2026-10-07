@@ -1084,7 +1084,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 		writingBytes = tx.RequestBodyLimit - tx.requestBodyBuffer.length
 	}
 
-	w, err := io.CopyN(tx.requestBodyBuffer, r, writingBytes)
+	w, err := tx.WAF.copyBodyN(tx.requestBodyBuffer, r, writingBytes)
 	if err != nil && err != io.EOF {
 		return nil, int(w), err
 	}
@@ -1342,7 +1342,7 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 		writingBytes = tx.ResponseBodyLimit - tx.responseBodyBuffer.length
 	}
 
-	w, err := io.CopyN(tx.responseBodyBuffer, r, writingBytes)
+	w, err := tx.WAF.copyBodyN(tx.responseBodyBuffer, r, writingBytes)
 	if err != nil && err != io.EOF {
 		return nil, int(w), err
 	}

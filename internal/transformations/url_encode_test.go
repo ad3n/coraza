@@ -26,10 +26,13 @@ func TestEncode(t *testing.T) {
 			input: "https://www.coraza.io",
 			want:  "https%3a%2f%2fwww%2ecoraza%2eio",
 		},
+		{
+			input: "*-_.+/?%\x00\xff",
+			want:  "*%2d%5f%2e%2b%2f%3f%25%00%ff",
+		},
 	}
 
-	for _, tc := range tests {
-		tt := tc
+	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
 			have, changed, err := urlEncode(tt.input)
 			if err != nil {
@@ -52,16 +55,16 @@ func BenchmarkURLEncode(b *testing.B) {
 		"~", //nolint:staticcheck
 		"Test Case",
 	}
-	for i := 0; i < b.N; i++ {
-		for _, tt := range tests {
-			b.Run(tt, func(b *testing.B) {
-				for j := 0; j < b.N; j++ {
-					_, _, err := urlEncode(tt)
-					if err != nil {
-						b.Error(err)
-					}
+	tests = append(tests, "helloWorld0123*", "")
+
+	for _, input := range tests {
+		b.Run(input, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				if _, _, err := urlEncode(input); err != nil {
+					b.Fatal(err)
 				}
-			})
-		}
+			}
+		})
 	}
 }
