@@ -17,7 +17,16 @@ test/crs
 vendor/
 coraza-waf
 __debug_bin
-docs/
+docs/*
+!docs/adr/
+docs/adr/*
+!docs/adr/0062-multipart-copy-buffer-pooling.md
+!docs/benchmarks/
+docs/benchmarks/*
+!docs/benchmarks/2026-10-08-multipart-pool/
+!docs/audits/
+docs/audits/*
+!docs/audits/2026-10-08-pool-safety/
 build/
 
 go.work.sum

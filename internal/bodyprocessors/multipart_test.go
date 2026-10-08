@@ -31,15 +31,34 @@ func multipartProcessor(t *testing.T) plugintypes.BodyProcessor {
 	return mp
 }
 
-func TestProcessRequestFailsDueToIncorrectMimeType(t *testing.T) {
-	mp := multipartProcessor(t)
+func TestMultipartInvalidInput(t *testing.T) {
+	tests := []struct {
+		name   string
+		mime   string
+		reader io.Reader
+		want   string
+	}{
+		{name: "non-multipart MIME", mime: "application/json", reader: strings.NewReader(""), want: "not a multipart body"},
+		{name: "invalid MIME", mime: "multipart/form-data; boundary=\"", reader: strings.NewReader(""), want: "mime:"},
+		{name: "nil reader", mime: "multipart/form-data; boundary=X", want: "nil multipart body reader"},
+		{name: "valid empty body", mime: "multipart/form-data; boundary=X", reader: strings.NewReader("--X--\r\n")},
+	}
 
-	expectedError := "not a multipart body"
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := multipartProcessor(t).ProcessRequest(tt.reader, corazawaf.NewTransactionVariables(), plugintypes.BodyProcessorOptions{Mime: tt.mime})
+			if tt.want == "" {
+				if err != nil {
+					t.Fatal(err)
+				}
 
-	if err := mp.ProcessRequest(strings.NewReader(""), corazawaf.NewTransactionVariables(), plugintypes.BodyProcessorOptions{
-		Mime: "application/json",
-	}); err == nil || err.Error() != expectedError {
-		t.Fatal("expected error")
+				return
+			}
+
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("error = %v, want %q", err, tt.want)
+			}
+		})
 	}
 }
 
@@ -730,15 +749,23 @@ func TestMultipartFilenameStar(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			storagePath := ""
+			if environment.HasAccessToFS {
+				t.Parallel()
+				storagePath = t.TempDir()
+			}
+
+			content := strings.Repeat(tc.name+"|", 2048)
 			payload := "--X\r\n" +
 				"Content-Disposition: form-data; name=\"upload\"; " + tc.fields + "\r\n\r\n" +
-				"file content" +
+				content +
 				"\r\n--X--\r\n"
 
 			mp := multipartProcessor(t)
 			v := corazawaf.NewTransactionVariables()
 			if err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
-				Mime: "multipart/form-data; boundary=X",
+				Mime:        "multipart/form-data; boundary=X",
+				StoragePath: storagePath,
 			}); err != nil {
 				t.Fatal(err)
 			}
@@ -781,6 +808,22 @@ func TestMultipartFilenameStar(t *testing.T) {
 			}
 			if isFile && !slices.Equal(gotFiles, want) {
 				t.Errorf("FILES = %v, want %v", gotFiles, want)
+			}
+
+			if isFile && environment.HasAccessToFS {
+				files := v.FilesTmpNames().FindAll()
+				if len(files) != 1 {
+					t.Fatalf("temporary files = %d, want 1", len(files))
+				}
+
+				stored, err := os.ReadFile(files[0].Value())
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if string(stored) != content {
+					t.Fatal("stored file content differs from this request's payload")
+				}
 			}
 
 			wantStrict := ""
@@ -908,28 +951,50 @@ func BenchmarkMultipartFilenameStar(b *testing.B) {
 	tests := []struct {
 		name   string
 		fields string
+		size   int
+		count  int
 	}{
-		{"plain filename", `filename="safe.jpg"`},
-		{"filename* utf-8", `filename="safe.jpg"; filename*=UTF-8''shell.php`},
-		{"filename* iso-8859-1", `filename="safe.jpg"; filename*=iso-8859-1''shell.php`},
+		{"plain filename", `filename="safe.jpg"`, 12, 1},
+		{"filename* utf-8", `filename="safe.jpg"; filename*=UTF-8''shell.php`, 12, 1},
+		{"filename* iso-8859-1", `filename="safe.jpg"; filename*=iso-8859-1''shell.php`, 12, 1},
+		{"large file", `filename="large.bin"`, 64 * 1024, 1},
+		{"many files", `filename="file.bin"`, 4 * 1024, 16},
+		{"field only", "", 12, 1},
 	}
 
 	for _, tc := range tests {
-		payload := "--X\r\n" +
-			"Content-Disposition: form-data; name=\"upload\"; " + tc.fields + "\r\n\r\n" +
-			"file content" +
-			"\r\n--X--\r\n"
+		var payload strings.Builder
+		for range tc.count {
+			payload.WriteString("--X\r\nContent-Disposition: form-data; name=\"upload\"")
+			if tc.fields != "" {
+				payload.WriteString("; " + tc.fields)
+			}
+
+			payload.WriteString("\r\n\r\n")
+			payload.WriteString(strings.Repeat("x", tc.size))
+			payload.WriteString("\r\n")
+		}
+
+		payload.WriteString("--X--\r\n")
+		data := payload.String()
 
 		b.Run(tc.name, func(b *testing.B) {
-			mp, err := bodyprocessors.GetBodyProcessor("multipart")
-			if err != nil {
-				b.Fatal(err)
-			}
-			for i := 0; i < b.N; i++ {
+			b.ReportAllocs()
+			for b.Loop() {
+				mp, err := bodyprocessors.GetBodyProcessor("multipart")
+				if err != nil {
+					b.Fatal(err)
+				}
+
 				v := corazawaf.NewTransactionVariables()
-				if err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
-					Mime: "multipart/form-data; boundary=X",
-				}); err != nil {
+				err = mp.ProcessRequest(strings.NewReader(data), v, plugintypes.BodyProcessorOptions{Mime: "multipart/form-data; boundary=X"})
+				for _, file := range v.FilesTmpNames().FindAll() {
+					if removeErr := os.Remove(file.Value()); removeErr != nil {
+						b.Fatal(removeErr)
+					}
+				}
+
+				if err != nil {
 					b.Fatal(err)
 				}
 			}

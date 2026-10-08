@@ -18,7 +18,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
 	github.com/ad3n/gjson v1.0.3 // indirect
 	github.com/ad3n/jsonschema v0.0.7 // indirect
-	github.com/corazawaf/libinjection-go v0.3.3 // indirect
+	github.com/ad3n/libinjection-go v1.0.0 // indirect
 	github.com/coreruleset/ftw-tests-schema/v2 v2.3.0 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect

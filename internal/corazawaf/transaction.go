@@ -1736,7 +1736,24 @@ func (tx *Transaction) auditLogCollectFiles() []plugintypes.AuditLogTransactionR
 // This method helps the GC to clean up the transaction faster and release resources
 // It also allows caches the transaction back into the sync.Pool
 func (tx *Transaction) Close() error {
-	defer tx.WAF.txPool.Put(tx)
+	if tx == nil || tx.context == nil {
+		return nil
+	}
+	defer func() {
+		tx.context = nil
+		tx.matchedRules = nil
+		tx.interruption = nil
+		tx.detectionOnlyInterruption = nil
+		tx.Logdata = ""
+		tx.SkipAfter = ""
+		tx.ruleRemoveByID = nil
+		tx.ruleRemoveByIDRanges = nil
+		tx.ruleRemoveTargetByID = nil
+		tx.stopWatches = nil
+		tx.debugLogger = nil
+		clear(tx.transformationCache)
+		tx.WAF.txPool.Put(tx)
+	}()
 
 	var errs []error
 	if environment.HasAccessToFS {

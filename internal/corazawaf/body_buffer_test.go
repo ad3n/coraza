@@ -42,37 +42,52 @@ func TestBodyReaderMemory(t *testing.T) {
 
 func TestBodyReaderFile(t *testing.T) {
 	if !environment.HasAccessToFS {
-		return // t.Skip doesn't work on TinyGo
+		return
 	}
 
-	// body reader memory limit is 1 byte
-	br := NewBodyBuffer(types.BodyBufferOptions{
-		TmpPath:     t.TempDir(),
-		MemoryLimit: 1,
-		Limit:       100,
-	})
-	if _, err := br.Write([]byte("test")); err != nil {
-		t.Error(err)
-	}
-	buf := new(strings.Builder)
-	reader, err := br.Reader()
-	if err != nil {
-		t.Error(err)
-	}
-	if _, err := io.Copy(buf, reader); err != nil {
-		t.Error(err)
-	}
-	if buf.String() != "test" {
-		t.Error("Failed to get BodyReader from file")
-	}
-	// Let's check if files are being deleted
-	f := br.writer
-	if _, err := os.Stat(f.Name()); os.IsNotExist(err) {
-		t.Error("BodyReader's Tmp file does not exist")
-	}
-	_ = br.Reset()
-	if _, err := os.Stat(f.Name()); err == nil {
-		t.Error("BodyReader's Tmp file was not deleted")
+	for _, tt := range []struct {
+		name          string
+		alreadyClosed bool
+	}{
+		{name: "open file"},
+		{name: "close error still removes file", alreadyClosed: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			br := NewBodyBuffer(types.BodyBufferOptions{TmpPath: t.TempDir(), MemoryLimit: 1, Limit: 100})
+			if _, err := br.Write([]byte("test")); err != nil {
+				t.Fatal(err)
+			}
+
+			reader, err := br.Reader()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			data, err := io.ReadAll(reader)
+			if err != nil || string(data) != "test" {
+				t.Fatalf("body = %q, %v; want test", data, err)
+			}
+
+			file := br.writer
+			if _, err := os.Stat(file.Name()); err != nil {
+				t.Fatal(err)
+			}
+
+			if tt.alreadyClosed {
+				if err := file.Close(); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			err = br.Reset()
+			if (err != nil) != tt.alreadyClosed {
+				t.Fatalf("Reset error = %v, want error %t", err, tt.alreadyClosed)
+			}
+
+			if _, err := os.Stat(file.Name()); !os.IsNotExist(err) {
+				t.Fatalf("temporary body file remains after Reset: %v", err)
+			}
+		})
 	}
 }
 
@@ -86,11 +101,14 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 		want        string
 		wantErr     error
 		readerError bool
+		nilReader   bool
 	}{
 		{name: "memory", input: "test", limit: 4, memoryLimit: 5, want: "test"},
 		{name: "short reader", input: "x", limit: 5, memoryLimit: 5, want: "x", wantErr: io.EOF},
 		{name: "limited", input: "secret", limit: 2, memoryLimit: 5, want: "se"},
 		{name: "empty", limit: 0, memoryLimit: 5},
+		{name: "nil reader", limit: 4, memoryLimit: 5, nilReader: true, wantErr: errNilBodyReader},
+		{name: "nil reader with zero limit", limit: 0, memoryLimit: 5, nilReader: true},
 		{name: "negative", input: "test", limit: -1, memoryLimit: 5},
 		{name: "file", input: "test", limit: 4, memoryLimit: 1, want: "test"},
 		{name: "reader error", limit: 4, memoryLimit: 5, readerError: true, wantErr: io.ErrUnexpectedEOF},
@@ -115,6 +133,10 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 			var input io.Reader = src
 			if tt.readerError {
 				input = iotest.ErrReader(io.ErrUnexpectedEOF)
+			}
+
+			if tt.nilReader {
+				input = nil
 			}
 
 			n, err := waf.copyBodyN(br, input, tt.limit)

@@ -19,8 +19,8 @@ go 1.27
 require (
 	github.com/ad3n/gjson v1.0.3
 	github.com/ad3n/jsonschema v0.0.7
+	github.com/ad3n/libinjection-go v1.0.0
 	github.com/corazawaf/coraza-coreruleset v0.0.0-20240226094324-415b1017abdc
-	github.com/corazawaf/libinjection-go v0.3.3
 	github.com/foxcpp/go-mockdns v1.2.0
 	github.com/jcchavezs/mergefs v0.1.1
 	github.com/magefile/mage v1.17.2

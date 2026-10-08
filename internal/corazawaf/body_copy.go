@@ -3,7 +3,12 @@
 
 package corazawaf
 
-import "io"
+import (
+	"errors"
+	"io"
+)
+
+var errNilBodyReader = errors.New("nil body reader")
 
 type bodyCopyState struct {
 	reader io.LimitedReader
@@ -11,6 +16,10 @@ type bodyCopyState struct {
 }
 
 func (w *WAF) copyBodyN(dst *BodyBuffer, src io.Reader, limit int64) (int64, error) {
+	if src == nil && limit > 0 {
+		return 0, errNilBodyReader
+	}
+
 	state := w.bodyCopyPool.Get().(*bodyCopyState)
 	state.reader = io.LimitedReader{R: src, N: limit}
 	defer func() {

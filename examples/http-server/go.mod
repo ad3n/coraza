@@ -7,7 +7,7 @@ require github.com/ad3n/coraza/v3 v3.3.3
 require (
 	github.com/ad3n/gjson v1.0.3 // indirect
 	github.com/ad3n/jsonschema v0.0.7 // indirect
-	github.com/corazawaf/libinjection-go v0.3.3 // indirect
+	github.com/ad3n/libinjection-go v1.0.0 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/kaptinlin/jsonpointer v0.4.28 // indirect
 	github.com/magefile/mage v1.17.2 // indirect
