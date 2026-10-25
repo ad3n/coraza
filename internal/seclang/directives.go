@@ -331,6 +331,36 @@ func directiveSecRequestBodyJsonDepthLimit(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures the maximum JSON recursion depth limit Coraza will accept
+// in response bodies.
+// Default: 1024
+// Syntax: SecResponseBodyJsonDepthLimit [LIMIT]
+// ---
+// Anything over the limit will generate a RES_BODY_ERROR in the JSON body processor.
+// Requires `SecResponseBodyAccess On` to have any effect.
+//
+// Example:
+// ```seclang
+// SecResponseBodyJsonDepthLimit 1024
+// ```
+func directiveSecResponseBodyJsonDepthLimit(options *DirectiveOptions) error {
+	if len(options.Opts) == 0 {
+		return errEmptyOptions
+	}
+
+	limit, err := strconv.Atoi(options.Opts)
+	if err != nil {
+		return err
+	}
+
+	if limit <= 0 {
+		return errors.New("limit must be a positive integer")
+	}
+
+	options.WAF.ResponseBodyJsonDepthLimit = limit
+	return nil
+}
+
 // Description: Configures the rules engine.
 // Syntax: SecRuleEngine On|Off|DetectionOnly
 // Default: Off
@@ -479,8 +509,7 @@ func directiveSecRuleRemoveByID(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	idsOrRanges := strings.Fields(options.Opts)
-	for _, idOrRange := range idsOrRanges {
+	for idOrRange := range strings.FieldsSeq(options.Opts) {
 		switch idx := strings.Index(idOrRange, "-"); idx {
 		case -1:
 			id, err := strconv.Atoi(idOrRange)
@@ -1109,7 +1138,7 @@ func directiveSecAuditLogFileMode(options *DirectiveOptions) error {
 //
 // Example:
 // ```seclang
-// SecAuditLogRelevantStatus "^(?:5|40[1235])"
+// SecAuditLogRelevantStatus "^(?:5|4(?:0[0-35-9]|[1-9][0-9]))"
 // ```
 // This example would log all 5xx and 4xx level status codes,
 // except for 404s. Although you could achieve the same effect with a rule in phase 5,
@@ -1125,7 +1154,7 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	re, err := options.WAF.Memoizer().Do(options.Opts, func() (any, error) { return regexp.Compile(options.Opts) })
+	re, err := options.WAF.Memoizer().Do("regexp:"+options.Opts, func() (any, error) { return regexp.Compile(options.Opts) })
 	if err != nil {
 		return err
 	}
@@ -1530,7 +1559,7 @@ func hasDisruptiveActions(actions []ruleAction) bool {
 // ```seclang
 // SecRuleUpdateActionById 12345 "deny,status:403"
 // ```
-// The rule ID can be single IDs or ranges of IDs. The targets are separated by a pipe character.
+// The rule ID can be single IDs or ranges of IDs.
 func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -1658,9 +1687,7 @@ func updateActionBySingleID(id int, actions string, options *DirectiveOptions) e
 // ---
 // As an alternative to `SecRuleUpdateTargetById`, this directive will append variables to the specified rule
 // with the targets provided in the second parameter. It can be handy for updating an entire group of rules.
-// Matching is by case-sensitive string equality.
-// This directive will append variables to the specified rule with the targets provided in the second parameter.
-// The rule ID can be single IDs or ranges of IDs. The targets are separated by a pipe character.
+// Matching is by case-sensitive string equality. The targets are separated by a pipe character.
 //
 // Note: OWASP CRS provides a list of [supported tags](https://coreruleset.org/docs/3-about-rules/metadata/#tags-about-rule-classification).
 //
@@ -1746,7 +1773,7 @@ func directiveSecDataset(options *DirectiveOptions) error {
 	}
 	var arr []string
 	data := strings.Trim(d, "`")
-	for _, s := range strings.Split(data, "\n") {
+	for s := range strings.SplitSeq(data, "\n") {
 		s = strings.TrimSpace(s)
 		if s == "" || s[0] == '#' {
 			continue
@@ -1757,12 +1784,16 @@ func directiveSecDataset(options *DirectiveOptions) error {
 	return nil
 }
 
-// Description: Configures the maximum number of ARGS that will be accepted for processing.
+// Description: Configures the maximum number of arguments Coraza keeps from each source.
 // Default: 1000
 // Syntax: SecArgumentsLimit [LIMIT]
 // ---
-// Exceeding the limit will not be included.
-// With JSON body processing, there is nothing to do when exceed the limit.
+// The query string (ARGS_GET), the path (ARGS_PATH), and urlencoded or JSON request
+// bodies (ARGS_POST) are each counted separately; JSON response bodies (RESPONSE_ARGS)
+// use the same limit. Arguments beyond the limit are dropped and ARGUMENTS_LIMIT_REACHED
+// is set to 1, so a rule can reject the request (see rules 200004 and 200005 in
+// coraza.conf-recommended). The value must be greater than 0.
+//
 // Example:
 // ```seclang
 // SecArgumentsLimit 1000

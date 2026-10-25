@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	coreruleset "github.com/corazawaf/coraza-coreruleset"
+	coreruleset "github.com/corazawaf/coraza-coreruleset/crs/v4"
 	"github.com/jcchavezs/mergefs"
 	"github.com/jcchavezs/mergefs/io"
 
@@ -472,6 +472,16 @@ func TestSelect(t *testing.T) {
 		{
 			name:          "MULTIPART_FILENAME",
 			rule:          `SecRule MULTIPART_FILENAME:foo "bar" "id:33"`,
+			expectedError: false,
+		},
+		{
+			name:          "MULTIPART_FILENAME_CHARSET",
+			rule:          `SecRule MULTIPART_FILENAME_CHARSET:foo "bar" "id:1033"`,
+			expectedError: false,
+		},
+		{
+			name:          "MULTIPART_FILENAME_LANGUAGE",
+			rule:          `SecRule MULTIPART_FILENAME_LANGUAGE:foo "bar" "id:1034"`,
 			expectedError: false,
 		},
 		{

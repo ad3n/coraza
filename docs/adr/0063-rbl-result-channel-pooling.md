@@ -1,4 +1,4 @@
-# ADR-0058: Pool completed RBL result channels
+# ADR-0063: Pool completed RBL result channels
 
 - **Status:** proposed
 - **Date:** 2026-09-24 (expected; update on merge)

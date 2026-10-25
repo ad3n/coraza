@@ -24,7 +24,7 @@ func TestDocExamplesParse(t *testing.T) {
 	var blocks []string
 	var cur []string
 	in := false
-	for _, l := range strings.Split(string(src), "\n") {
+	for l := range strings.SplitSeq(string(src), "\n") {
 		if m := fence.FindStringSubmatch(l); m != nil {
 			switch {
 			case !in:

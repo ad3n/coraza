@@ -102,9 +102,9 @@ func doJsDecode(input string, pos int) (string, bool) {
 			j := 0
 
 			for (i+1+j < inputLen) && (j < 3) {
-				buf[j] = input[i+j]
+				buf[j] = input[i+1+j]
 				j++
-				if !isodigit(input[i+j]) {
+				if i+1+j >= inputLen || !isodigit(input[i+1+j]) {
 					break
 				}
 			}
@@ -118,7 +118,7 @@ func doJsDecode(input string, pos int) (string, bool) {
 					buf = buf[:j]
 				}
 
-				nn, _ := strconv.ParseInt(string(buf), 8, 8)
+				nn, _ := strconv.ParseUint(string(buf), 8, 8)
 				d[c] = byte(nn)
 				changed = true
 				c++
