@@ -135,4 +135,6 @@ Superseding does not delete the old record. Set its status and let the history s
 
 | [0063](0063-rbl-result-channel-pooling.md) | Not opened | Pending | unreleased (post-v3.7.0) | ⚡ | Pool completed RBL result channels |
 
+| [0064](0064-transformation-noop-fast-paths.md) | Not opened | Pending | unreleased (post-v3.8.1) | ⚡ | Avoid buffers for unchanged transformation inputs |
+
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor

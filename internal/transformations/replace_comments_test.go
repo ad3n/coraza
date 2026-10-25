@@ -3,7 +3,10 @@
 
 package transformations
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestReplaceComments(t *testing.T) {
 	tests := []struct {
@@ -48,6 +51,30 @@ func TestReplaceComments(t *testing.T) {
 			}
 			if have != tt.want {
 				t.Errorf("have %q, want %q", have, tt.want)
+			}
+		})
+	}
+}
+
+func BenchmarkReplaceComments(b *testing.B) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"unchanged", strings.Repeat("ordinary request data ", 16)},
+		{"short", "a/*comment*/b"},
+		{"late", strings.Repeat("ordinary request data ", 16) + "/*comment*/end"},
+		{"dense", strings.Repeat("a/*comment*/b", 32)},
+		{"unterminated", "start/*" + strings.Repeat("comment", 32)},
+	}
+	for _, tt := range tests {
+		b.Run(tt.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				_, _, err := replaceComments(tt.input)
+				if err != nil {
+					b.Fatal(err)
+				}
 			}
 		})
 	}

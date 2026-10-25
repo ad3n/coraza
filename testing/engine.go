@@ -282,15 +282,18 @@ func (t *Test) Transaction() types.Transaction {
 
 // Request returns the raw request
 func (t *Test) Request() string {
-	str := fmt.Sprintf("%s %s %s\r\n", t.RequestMethod, t.RequestURI, t.RequestProtocol)
+	var str strings.Builder
+	fmt.Fprintf(&str, "%s %s %s\r\n", t.RequestMethod, t.RequestURI, t.RequestProtocol)
 	for k, v := range t.RequestHeaders {
-		str += fmt.Sprintf("%s: %s\r\n", k, v)
+		fmt.Fprintf(&str, "%s: %s\r\n", k, v)
 	}
-	str += "\r\n"
+
+	str.WriteString("\r\n")
 	if t.body != "" {
-		str += t.body
+		str.WriteString(t.body)
 	}
-	return str
+
+	return str.String()
 }
 
 // NewTest creates a new test with default properties

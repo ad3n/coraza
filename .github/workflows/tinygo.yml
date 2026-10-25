@@ -16,6 +16,9 @@ on:
 
 permissions: {}
 
+env:
+  GOTOOLCHAIN: local
+
 concurrency:
   group: tinygo-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}

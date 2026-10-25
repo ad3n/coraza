@@ -2,6 +2,8 @@ module github.com/ad3n/coraza/v3/examples/http-server
 
 go 1.26.0
 
+toolchain go1.27.3
+
 require github.com/ad3n/coraza/v3 v3.3.3
 
 require (

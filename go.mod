@@ -2,6 +2,8 @@ module github.com/ad3n/coraza/v3
 
 go 1.26.0
 
+toolchain go1.27.3
+
 // Testing dependencies:
 // - go-mockdns
 // - go-modsecurity (optional)

@@ -439,7 +439,7 @@ func TestMultipartDoesNotAccumulateOpenFileDescriptors(t *testing.T) {
 	}
 
 	baseline := int64(openFDs())
-	var peak int64
+	var peak atomic.Int64
 	done := make(chan struct{})
 	var wg sync.WaitGroup
 	wg.Go(func() {
@@ -450,8 +450,8 @@ func TestMultipartDoesNotAccumulateOpenFileDescriptors(t *testing.T) {
 			default:
 				n := int64(openFDs())
 				for {
-					cur := atomic.LoadInt64(&peak)
-					if n <= cur || atomic.CompareAndSwapInt64(&peak, cur, n) {
+					cur := peak.Load()
+					if n <= cur || peak.CompareAndSwap(cur, n) {
 						break
 					}
 				}
@@ -472,8 +472,8 @@ func TestMultipartDoesNotAccumulateOpenFileDescriptors(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if spike := atomic.LoadInt64(&peak) - baseline; spike >= parts/2 {
-		t.Fatalf("temp files were not closed as they were processed: baseline=%d peak=%d spike=+%d across %d parts", baseline, atomic.LoadInt64(&peak), spike, parts)
+	if spike := peak.Load() - baseline; spike >= parts/2 {
+		t.Fatalf("temp files were not closed as they were processed: baseline=%d peak=%d spike=+%d across %d parts", baseline, peak.Load(), spike, parts)
 	}
 }
 

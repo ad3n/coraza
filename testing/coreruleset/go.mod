@@ -2,6 +2,8 @@ module github.com/ad3n/coraza/v3/testing/coreruleset
 
 go 1.26.0
 
+toolchain go1.27.3
+
 require (
 	github.com/ad3n/coraza/v3 v3.7.0
 	github.com/bmatcuk/doublestar/v4 v4.10.0

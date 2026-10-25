@@ -485,11 +485,11 @@ func (r *Rule) transformArg(arg types.MatchData, cache map[transformationKey]tra
 	value := argValue
 	var errs []error
 
-	for i := len(r.transformationPrefixIDs) - 1; i >= 0; i-- {
+	for i, v := range slices.Backward(r.transformationPrefixIDs) {
 		key := transformationKey{
 			argValue:          argValuePtr,
 			argValueLen:       argValueLen,
-			transformationsID: r.transformationPrefixIDs[i],
+			transformationsID: v,
 		}
 		if cached, ok := cache[key]; ok {
 			if i == len(r.transformationPrefixIDs)-1 {

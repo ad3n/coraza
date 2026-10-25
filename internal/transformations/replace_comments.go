@@ -3,15 +3,22 @@
 
 package transformations
 
+import "strings"
+
 func replaceComments(data string) (string, bool, error) {
 	transformedData, changed := doReplaceComments(data)
 	return transformedData, changed, nil
 }
 
 func doReplaceComments(value string) (string, bool) {
-	var i, j int
-	incomment := false
-	changed := false
+	pos := strings.Index(value, "/*")
+	if pos < 0 {
+		return value, false
+	}
+
+	i, j := pos+2, pos
+	incomment := true
+	changed := true
 
 	input := []byte(value)
 	inputLen := len(input)
@@ -46,5 +53,5 @@ func doReplaceComments(value string) (string, bool) {
 		j++
 	}
 
-	return string(input[0:j]), changed
+	return string(input[:j]), changed
 }

@@ -3,7 +3,10 @@
 
 package transformations
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestEncode(t *testing.T) {
 	tests := []struct {
@@ -52,16 +55,16 @@ func BenchmarkURLEncode(b *testing.B) {
 		"~", //nolint:staticcheck
 		"Test Case",
 	}
-	for i := 0; i < b.N; i++ {
-		for _, tt := range tests {
-			b.Run(tt, func(b *testing.B) {
-				for j := 0; j < b.N; j++ {
-					_, _, err := urlEncode(tt)
-					if err != nil {
-						b.Error(err)
-					}
+	tests = append(tests, strings.Repeat("abcXYZ012*", 32), strings.Repeat("abcXYZ012*", 32)+" ")
+	for _, tt := range tests {
+		b.Run(tt, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				_, _, err := urlEncode(tt)
+				if err != nil {
+					b.Fatal(err)
 				}
-			})
-		}
+			}
+		})
 	}
 }

@@ -16,6 +16,9 @@ on:
 
 permissions: {}
 
+env:
+  GOTOOLCHAIN: local
+
 concurrency:
   group: regression-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -25,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: [1.26.x]
+        go-version: [1.27.3]
         os: [ubuntu-latest]
         build-flag:
           - ""
@@ -43,17 +46,17 @@ jobs:
           - "coraza.rule.mandatory_rule_id_check,coraza.rule.case_sensitive_args_keys,coraza.rule.no_regex_multiline"
           - "coraza.rule.multiphase_evaluation,coraza.rule.mandatory_rule_id_check,coraza.rule.case_sensitive_args_keys,coraza.rule.no_regex_multiline,coraza.no_memoize,no_fs_access,coraza.rule.rx_prefilter"
         include:
-          - go-version: 1.27.x
+          - go-version: 1.26.x
             os: ubuntu-latest
             build-flag: ""
-          - go-version: 1.27.x
+          - go-version: 1.26.x
             os: ubuntu-latest
             build-flag: "coraza.rule.multiphase_evaluation,coraza.rule.mandatory_rule_id_check,coraza.rule.case_sensitive_args_keys,coraza.rule.no_regex_multiline,coraza.no_memoize,no_fs_access"
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
     env:
-      GOLANG_BASE_VERSION: "1.26.x"
+      GOLANG_BASE_VERSION: "1.27.3"
     steps:
       - name: Checkout code
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -107,7 +110,7 @@ jobs:
         # FIPS-relevant behavior shifts between Go releases (1.26 filtered non-approved curves out
         # of the crypto/tls defaults), so both the oldest supported and the current release are
         # exercised.
-        go-version: [1.26.x, 1.27.x]
+        go-version: [1.26.x, 1.27.3]
     runs-on: ubuntu-latest
     permissions:
       contents: read

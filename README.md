@@ -163,6 +163,10 @@ Expected directives that have to be loaded and available flags can be found in [
 
 ## Development
 
+Development and primary CI use Go 1.27.3. The module minimum remains Go 1.26
+for downstream and TinyGo compatibility; `toolchain go1.27.3` selects the
+preferred standard Go toolchain without changing the public API.
+
 Coraza only requires Go for development. You can run `mage.go` to issue development commands.
 
 See the list of commands

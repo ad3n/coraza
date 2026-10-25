@@ -5,7 +5,7 @@
 # The scanner builds this image with the repository checkout as the build context, then
 # analyses it with no network access, so everything the build and the tests need is fetched
 # here. Keep the Go version aligned with .github/workflows/regression.yml.
-FROM golang:1.26-bookworm
+FROM golang:1.27.3-bookworm
 ENV DEBIAN_FRONTEND=noninteractive \
     GOTOOLCHAIN=local
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git \

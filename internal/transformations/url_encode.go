@@ -12,35 +12,40 @@ func urlEncode(data string) (string, bool, error) {
 
 func doURLEncode(input string) (string, bool) {
 	inputLen := len(input)
-	if inputLen == 0 {
-		return "", false
+	pos := 0
+	for pos < inputLen {
+		cc := input[pos]
+		if cc != '*' && (cc < '0' || cc > '9') && (cc < 'A' || cc > 'Z') && (cc < 'a' || cc > 'z') {
+			break
+		}
+
+		pos++
 	}
 
-	changed := false
-	leng := inputLen * 3
+	if pos == inputLen {
+		return input, false
+	}
+
 	var d strings.Builder
-	d.Grow(leng)
-	c2xTable := []byte("0123456789abcdef")
+	d.Grow(pos + (inputLen-pos)*3)
+	d.WriteString(input[:pos])
+	const c2xTable = "0123456789abcdef"
 
-	/* ENH Only encode the characters that really need to be encoded. */
-
-	for i := range inputLen {
+	for i := pos; i < inputLen; i++ {
 		cc := input[i]
 
 		switch cc {
 		case ' ':
 			d.WriteByte('+')
-			changed = true
 		default:
 			switch {
 			case (cc == 42) || ((cc >= 48) && (cc <= 57)) || ((cc >= 65) && (cc <= 90)) || ((cc >= 97) && (cc <= 122)):
 				d.WriteByte(cc)
 			default:
-				d.Write([]byte{'%', c2xTable[(cc&0xff)>>4], c2xTable[(cc&0xff)&0x0f]})
-				changed = true
+				d.Write([]byte{'%', c2xTable[cc>>4], c2xTable[cc&0x0f]})
 			}
 		}
 	}
 
-	return d.String(), changed
+	return d.String(), true
 }
