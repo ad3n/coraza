@@ -4,8 +4,10 @@
 package corazawaf
 
 import (
+	"bytes"
 	"errors"
 	"io"
+	"strings"
 )
 
 var errNilBodyReader = errors.New("nil body reader")
@@ -24,8 +26,18 @@ func (w *WAF) copyBodyN(dst *BodyBuffer, src io.Reader, limit int64) (int64, err
 		return 0, errNilBodyReader
 	}
 
+	available := limit
+	switch reader := src.(type) {
+	case *bytes.Reader:
+		available = int64(reader.Len())
+	case *bytes.Buffer:
+		available = int64(reader.Len())
+	case *strings.Reader:
+		available = int64(reader.Len())
+	}
+
 	state := w.bodyCopyPool.Get().(*bodyCopyState)
-	size := min(limit, int64(len(state.buffer)))
+	size := min(limit, max(1, available), int64(len(state.buffer)))
 	buffer := state.buffer[:size:size]
 	state.reader = io.LimitedReader{R: src, N: limit}
 	defer func() {

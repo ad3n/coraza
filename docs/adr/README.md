@@ -141,4 +141,6 @@ Superseding does not delete the old record. Set its status and let the history s
 
 | [0066](0066-bounded-body-copy-scrubbing.md) | Not opened | Pending | unreleased (post-v3.8.1) | ⚡ | Bound pooled body-copy scrubbing by the copy limit |
 
+| [0067](0067-known-reader-body-copy-bounds.md) | Not opened | Pending | unreleased (post-v3.8.1) | ⚡ | Bound pooled copying by known remaining reader length |
+
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor

@@ -108,9 +108,15 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 		want        string
 		wantErr     error
 		readerError bool
+		readerKind  string
 		nilReader   bool
 	}{
 		{name: "multiple buffers", input: strings.Repeat("x", 32769), limit: 32769, memoryLimit: 32769, want: strings.Repeat("x", 32769)},
+		{name: "short string with large limit", input: "test", limit: 1 << 20, memoryLimit: 5, want: "test", wantErr: io.EOF},
+		{name: "short bytes reader with large limit", input: "test", limit: 1 << 20, memoryLimit: 5, want: "test", wantErr: io.EOF, readerKind: "bytes"},
+		{name: "short buffer with large limit", input: "test", limit: 1 << 20, memoryLimit: 5, want: "test", wantErr: io.EOF, readerKind: "buffer"},
+		{name: "opaque reader with large limit", input: "test", limit: 1 << 20, memoryLimit: 5, want: "test", wantErr: io.EOF, readerKind: "opaque"},
+		{name: "empty buffer with large limit", limit: 1 << 20, memoryLimit: 5, wantErr: io.EOF, readerKind: "buffer"},
 		{name: "memory", input: "test", limit: 4, memoryLimit: 5, want: "test"},
 		{name: "short reader", input: "x", limit: 5, memoryLimit: 5, want: "x", wantErr: io.EOF},
 		{name: "limited", input: "secret", limit: 2, memoryLimit: 5, want: "se"},
@@ -139,6 +145,20 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 
 			src := strings.NewReader(tt.input)
 			var input io.Reader = src
+			remaining := src.Len
+			switch tt.readerKind {
+			case "bytes":
+				reader := bytes.NewReader([]byte(tt.input))
+				input = reader
+				remaining = reader.Len
+			case "buffer":
+				reader := bytes.NewBufferString(tt.input)
+				input = reader
+				remaining = reader.Len
+			case "opaque":
+				input = struct{ io.Reader }{src}
+			}
+
 			if tt.readerError {
 				input = iotest.ErrReader(io.ErrUnexpectedEOF)
 			}
@@ -158,7 +178,7 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 				t.Fatalf("copy = %d, %v; want %d, %v", n, err, len(tt.want), tt.wantErr)
 			}
 
-			if src.Len() != len(tt.input)-len(tt.want) {
+			if remaining() != len(tt.input)-len(tt.want) {
 				t.Fatal("read beyond the requested limit")
 			}
 
@@ -257,36 +277,41 @@ func TestBodyBufferResetAndReadTheReader(t *testing.T) {
 func BenchmarkBodyCopy(b *testing.B) {
 	for _, size := range []int{64, 1024, 4096, 32768, 65536} {
 		b.Run(strconv.Itoa(size), func(b *testing.B) {
-			for _, pooled := range []bool{false, true} {
-				b.Run(strconv.FormatBool(pooled), func(b *testing.B) {
-					waf := NewWAF()
-					body := NewBodyBuffer(types.BodyBufferOptions{MemoryLimit: 1 << 20, Limit: 1 << 20})
-					data := bytes.Repeat([]byte("x"), size)
-					reader := bytes.NewReader(data)
-					copyBody := func() (int64, error) {
-						return io.CopyN(body, reader, int64(size))
+			for _, copyLimit := range []int{size, 1 << 20} {
+				b.Run("limit="+strconv.Itoa(copyLimit), func(b *testing.B) {
+					for _, pooled := range []bool{false, true} {
+						b.Run(strconv.FormatBool(pooled), func(b *testing.B) {
+							waf := NewWAF()
+							body := NewBodyBuffer(types.BodyBufferOptions{MemoryLimit: 1 << 20, Limit: 1 << 20})
+							data := bytes.Repeat([]byte("x"), size)
+							reader := bytes.NewReader(data)
+							copyBody := func() (int64, error) {
+								return io.CopyN(body, reader, int64(copyLimit))
+							}
+
+							if pooled {
+								copyBody = func() (int64, error) {
+									return waf.copyBodyN(body, reader, int64(copyLimit))
+								}
+							}
+
+							b.ReportAllocs()
+							b.SetBytes(int64(size))
+
+							for b.Loop() {
+								reader.Reset(data)
+								n, err := copyBody()
+								if (err != nil && err != io.EOF) || n != int64(size) {
+									b.Fatalf("copy = %d, %v", n, err)
+								}
+
+								if err := body.Reset(); err != nil {
+									b.Fatal(err)
+								}
+							}
+						})
 					}
 
-					if pooled {
-						copyBody = func() (int64, error) {
-							return waf.copyBodyN(body, reader, int64(size))
-						}
-					}
-
-					b.ReportAllocs()
-					b.SetBytes(int64(size))
-
-					for b.Loop() {
-						reader.Reset(data)
-						n, err := copyBody()
-						if err != nil || n != int64(size) {
-							b.Fatalf("copy = %d, %v", n, err)
-						}
-
-						if err := body.Reset(); err != nil {
-							b.Fatal(err)
-						}
-					}
 				})
 			}
 
