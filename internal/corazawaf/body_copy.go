@@ -46,7 +46,35 @@ func (w *WAF) copyBodyN(dst *BodyBuffer, src io.Reader, limit int64) (int64, err
 		w.bodyCopyPool.Put(state)
 	}()
 
-	written, err := io.CopyBuffer(dst, &state.reader, buffer)
+	var (
+		written int64
+		err     error
+	)
+	for {
+		n, readErr := state.reader.Read(buffer)
+		if n > 0 {
+			copied, writeErr := dst.Write(buffer[:n])
+			written += int64(copied)
+			if writeErr != nil {
+				err = writeErr
+				break
+			}
+
+			if copied != n {
+				err = io.ErrShortWrite
+				break
+			}
+		}
+
+		if readErr != nil {
+			if readErr != io.EOF {
+				err = readErr
+			}
+
+			break
+		}
+	}
+
 	if written == limit {
 		return written, nil
 	}

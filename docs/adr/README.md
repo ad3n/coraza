@@ -143,4 +143,6 @@ Superseding does not delete the old record. Set its status and let the history s
 
 | [0067](0067-known-reader-body-copy-bounds.md) | Not opened | Pending | unreleased (post-v3.8.1) | ⚡ | Bound pooled copying by known remaining reader length |
 
+| [0068](0068-concrete-pooled-stream-copy.md) | Not opened | Pending | unreleased (post-v3.8.1) | ⚡ | Remove generic copy dispatch from pooled body streaming |
+
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor
