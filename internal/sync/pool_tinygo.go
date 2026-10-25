@@ -22,8 +22,10 @@ func (p *tinygoPool) Get() any {
 		return p.new()
 	}
 
-	x := p.pool[len(p.pool)-1]
-	p.pool = p.pool[:len(p.pool)-1]
+	last := len(p.pool) - 1
+	x := p.pool[last]
+	p.pool[last] = nil
+	p.pool = p.pool[:last]
 	return x
 }
 

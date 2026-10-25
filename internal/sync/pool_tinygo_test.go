@@ -25,6 +25,12 @@ func TestNewPool(t *testing.T) {
 	p.Put(x)
 
 	y := p.Get()
+	pool := p.(*tinygoPool)
+	backing := pool.pool[:cap(pool.pool)]
+	if backing[0] != nil {
+		t.Fatal("pool retains a reference to a borrowed object")
+	}
+
 	if want, have := x, y; want != have {
 		t.Errorf("unexpected pool value, want %p, have %p", want, have)
 	}

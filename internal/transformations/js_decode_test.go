@@ -145,7 +145,7 @@ func BenchmarkJSDecode(b *testing.B) {
 	for _, tc := range tests {
 		tt := tc
 		b.Run(tt, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				if _, _, err := jsDecode(tt); err != nil {
 					b.Fatal(err)
 				}

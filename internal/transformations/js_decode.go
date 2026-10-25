@@ -4,7 +4,6 @@
 package transformations
 
 import (
-	"strconv"
 	"strings"
 
 	utils "github.com/ad3n/coraza/v3/internal/strings"
@@ -98,32 +97,26 @@ func doJsDecode(input string, pos int) (string, bool) {
 			i += 4
 		case (i+1 < inputLen) && isodigit(input[i+1]):
 			/* \OOO (only one byte, \000 - \377) */
-			buf := make([]byte, 3)
+			value := byte(0)
 			j := 0
-
-			for (i+1+j < inputLen) && (j < 3) {
-				buf[j] = input[i+1+j]
-				j++
-				if i+1+j >= inputLen || !isodigit(input[i+1+j]) {
+			for j < 3 && i+1+j < inputLen {
+				ch := input[i+1+j]
+				if !isodigit(ch) {
 					break
 				}
-			}
 
-			buf = buf[:j]
-
-			if j > 0 {
-				/* Do not use 3 characters if we will be > 1 byte */
-				if (j == 3) && (buf[0] > '3') {
-					j = 2
-					buf = buf[:j]
+				if j == 2 && input[i+1] > '3' {
+					break
 				}
 
-				nn, _ := strconv.ParseUint(string(buf), 8, 8)
-				d[c] = byte(nn)
-				changed = true
-				c++
-				i += 1 + j
+				value = value<<3 | (ch - '0')
+				j++
 			}
+
+			d[c] = value
+			changed = true
+			c++
+			i += 1 + j
 		case i+1 < inputLen:
 			/* \C */
 			cc := input[i+1]

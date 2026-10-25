@@ -199,5 +199,7 @@ type Transaction interface {
 	ID() string
 
 	// Closer closes the transaction and releases any resources associated with it such as request/response bodies.
+	// Call Close once after processing. The transaction may immediately be reused
+	// by another request; do not access it, its collections or its body readers afterward.
 	io.Closer
 }

@@ -137,4 +137,6 @@ Superseding does not delete the old record. Set its status and let the history s
 
 | [0064](0064-transformation-noop-fast-paths.md) | Not opened | Pending | unreleased (post-v3.8.1) | ⚡ | Avoid buffers for unchanged transformation inputs |
 
+| [0065](0065-merge-body-copy-pooling.md) | Not opened | Pending | unreleased (post-v3.8.1) | ⚡ | Integrate pooled body copying while preserving local compatibility |
+
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor

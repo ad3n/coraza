@@ -167,10 +167,7 @@ func (br *BodyBuffer) Reset() error {
 	if environment.HasAccessToFS && br.writer != nil {
 		w := br.writer
 		br.writer = nil
-		if err := w.Close(); err != nil {
-			return err
-		}
-		return os.Remove(w.Name())
+		return errors.Join(w.Close(), os.Remove(w.Name()))
 	}
 
 	return nil

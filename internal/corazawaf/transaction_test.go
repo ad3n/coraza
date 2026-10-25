@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -1565,15 +1566,39 @@ func TestTransactionSyncPool(t *testing.T) {
 			ID_: 1234,
 		},
 	})
+
+	type requestContextKey struct{}
+
+	tx.context = context.WithValue(tx.context, requestContextKey{}, strings.Repeat("request-context", 1024))
+	tx.transformationCache[transformationKey{}] = transformationValue{arg: strings.Repeat("transformed-body", 1024)}
+	retainedMatches := tx.MatchedRules()
+
 	for i := range 1000 {
 		if err := tx.Close(); err != nil {
 			t.Fatal(err)
 		}
+
+		if tx.context != nil || len(tx.transformationCache) != 0 || len(tx.matchedRules) != 0 {
+			t.Fatal("closed transaction retains request context, transformation cache or matched rules")
+		}
+
+		if len(retainedMatches) != 1 || retainedMatches[0] == nil {
+			t.Fatal("closing the transaction mutated retained match results")
+		}
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
 		tx = waf.NewTransaction()
 		if len(tx.matchedRules) != 0 {
 			t.Fatalf("failed to sync transaction pool, %d rules found after %d attempts", len(tx.matchedRules), i+1)
 			return
 		}
+	}
+
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -2831,5 +2856,37 @@ func BenchmarkRuleEvalWithRemovedRules(b *testing.B) {
 
 	for b.Loop() {
 		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
+	}
+}
+
+func BenchmarkTransactionBodyRead(b *testing.B) {
+	for _, response := range []bool{false, true} {
+		b.Run(strconv.FormatBool(response), func(b *testing.B) {
+			waf := NewWAF()
+			waf.RequestBodyAccess = true
+			waf.ResponseBodyAccess = true
+			data := strings.Repeat("x", 65536)
+			reader := strings.NewReader(data)
+			b.ReportAllocs()
+			b.SetBytes(int64(len(data)))
+
+			for b.Loop() {
+				tx := waf.NewTransactionWithOptions(Options{ID: "benchmark"})
+				reader.Reset(data)
+				read := tx.ReadRequestBodyFrom
+				if response {
+					read = tx.ReadResponseBodyFrom
+				}
+
+				interruption, n, err := read(reader)
+				if err != nil || interruption != nil || n != len(data) {
+					b.Fatalf("body read = %v, %d, %v", interruption, n, err)
+				}
+
+				if err := tx.Close(); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
 	}
 }

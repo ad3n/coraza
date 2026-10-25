@@ -55,7 +55,7 @@ func BenchmarkURLEncode(b *testing.B) {
 		"~", //nolint:staticcheck
 		"Test Case",
 	}
-	tests = append(tests, strings.Repeat("abcXYZ012*", 32), strings.Repeat("abcXYZ012*", 32)+" ")
+	tests = append(tests, "helloWorld0123*", "", strings.Repeat("abcXYZ012*", 32), strings.Repeat("abcXYZ012*", 32)+" ")
 	for _, tt := range tests {
 		b.Run(tt, func(b *testing.B) {
 			b.ReportAllocs()

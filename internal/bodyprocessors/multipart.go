@@ -15,9 +15,17 @@ import (
 	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/ad3n/coraza/v3/internal/collections"
 	"github.com/ad3n/coraza/v3/internal/environment"
+	"github.com/ad3n/coraza/v3/internal/sync"
 )
 
-type multipartBodyProcessor struct{}
+type multipartBodyProcessor struct {
+	copyPool sync.Pool
+}
+
+type multipartCopyState struct {
+	io.Writer
+	buffer [32 * 1024]byte
+}
 
 func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions) error {
 	mimeType := options.Mime
@@ -30,6 +38,11 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 	if !strings.HasPrefix(mediaType, "multipart/") {
 		return errors.New("not a multipart body")
 	}
+
+	if reader == nil {
+		return errors.New("nil multipart body reader")
+	}
+
 	mr := multipart.NewReader(reader, params["boundary"])
 	totalSize := int64(0)
 	filesCol := v.Files()
@@ -122,7 +135,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 					v.MultipartStrictError().(*collections.Single).Set("1")
 					return err
 				}
-				sz, err := io.Copy(temp, p)
+				sz, err := mbp.copyPart(temp, p)
 				if cerr := temp.Close(); cerr != nil && err == nil {
 					err = cerr
 				}
@@ -553,8 +566,24 @@ func fromHex(b byte) (byte, bool) {
 	}
 }
 
+func (mbp *multipartBodyProcessor) copyPart(dst io.Writer, src io.Reader) (int64, error) {
+	state := mbp.copyPool.Get().(*multipartCopyState)
+	defer func() {
+		state.Writer = nil
+		clear(state.buffer[:])
+		mbp.copyPool.Put(state)
+	}()
+
+	state.Writer = dst
+	return io.CopyBuffer(state, src, state.buffer[:])
+}
+
 func init() {
+	processor := &multipartBodyProcessor{
+		copyPool: sync.NewPool(func() any { return new(multipartCopyState{}) }),
+	}
+
 	RegisterBodyProcessor("multipart", func() plugintypes.BodyProcessor {
-		return &multipartBodyProcessor{}
+		return processor
 	})
 }
