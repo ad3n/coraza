@@ -14,6 +14,7 @@ import (
 	"testing/iotest"
 
 	"github.com/ad3n/coraza/v3/internal/environment"
+	"github.com/ad3n/coraza/v3/internal/sync"
 	"github.com/ad3n/coraza/v3/types"
 )
 
@@ -93,6 +94,12 @@ func TestBodyReaderFile(t *testing.T) {
 
 func TestBodyReaderWriteFromReader(t *testing.T) {
 	waf := NewWAF()
+	var states []*bodyCopyState
+	waf.bodyCopyPool = sync.NewPool(func() any {
+		state := new(bodyCopyState)
+		states = append(states, state)
+		return state
+	})
 	tests := []struct {
 		name        string
 		input       string
@@ -103,6 +110,7 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 		readerError bool
 		nilReader   bool
 	}{
+		{name: "multiple buffers", input: strings.Repeat("x", 32769), limit: 32769, memoryLimit: 32769, want: strings.Repeat("x", 32769)},
 		{name: "memory", input: "test", limit: 4, memoryLimit: 5, want: "test"},
 		{name: "short reader", input: "x", limit: 5, memoryLimit: 5, want: "x", wantErr: io.EOF},
 		{name: "limited", input: "secret", limit: 2, memoryLimit: 5, want: "se"},
@@ -121,7 +129,7 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 			}
 
 			br := NewBodyBuffer(types.BodyBufferOptions{
-				TmpPath: t.TempDir(), MemoryLimit: tt.memoryLimit, Limit: 5,
+				TmpPath: t.TempDir(), MemoryLimit: tt.memoryLimit, Limit: max(5, tt.limit),
 			})
 			defer func() {
 				if err := br.Reset(); err != nil {
@@ -140,6 +148,12 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 			}
 
 			n, err := waf.copyBodyN(br, input, tt.limit)
+			for _, state := range states {
+				if state.reader.R != nil || state.reader.N != 0 || bytes.Count(state.buffer[:], []byte{0}) != len(state.buffer) {
+					t.Fatal("pooled copy state retains reader or body data")
+				}
+			}
+
 			if n != int64(len(tt.want)) || !errors.Is(err, tt.wantErr) {
 				t.Fatalf("copy = %d, %v; want %d, %v", n, err, len(tt.want), tt.wantErr)
 			}
@@ -241,7 +255,7 @@ func TestBodyBufferResetAndReadTheReader(t *testing.T) {
 }
 
 func BenchmarkBodyCopy(b *testing.B) {
-	for _, size := range []int{1024, 65536} {
+	for _, size := range []int{64, 1024, 4096, 32768, 65536} {
 		b.Run(strconv.Itoa(size), func(b *testing.B) {
 			for _, pooled := range []bool{false, true} {
 				b.Run(strconv.FormatBool(pooled), func(b *testing.B) {

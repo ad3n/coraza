@@ -139,4 +139,6 @@ Superseding does not delete the old record. Set its status and let the history s
 
 | [0065](0065-merge-body-copy-pooling.md) | Not opened | Pending | unreleased (post-v3.8.1) | ⚡ | Integrate pooled body copying while preserving local compatibility |
 
+| [0066](0066-bounded-body-copy-scrubbing.md) | Not opened | Pending | unreleased (post-v3.8.1) | ⚡ | Bound pooled body-copy scrubbing by the copy limit |
+
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor
