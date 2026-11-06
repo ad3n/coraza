@@ -60,6 +60,10 @@ func TestTransformations(t *testing.T) {
 				if err != nil {
 					t.Error(err)
 				}
+				if data.Name == "removeCommentsChar" && changed != (data.Input != data.Output) {
+					t.Errorf("unexpected changed flag: %t", changed)
+				}
+
 				if out != data.Output {
 					t.Errorf("Transformation %s:\nInput: %s\nExpected: %v\nGot: %v\nExpected String: %s\nGot String: %s",
 						data.Name, data.Input, []byte(data.Output), []byte(out), data.Output, out)

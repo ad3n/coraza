@@ -145,5 +145,9 @@
 "type": "tfn",
 "ret": 1,
 "output": "Test\nCase  After"
-}
+},
+{"input": "/path/to-file<value>*", "output": "/path/to-file<value>*", "name": "removeCommentsChar", "type": "tfn", "ret": 1},
+{"input": "a<!--b-->c--d#e", "output": "abcde", "name": "removeCommentsChar", "type": "tfn", "ret": 1},
+{"input": "/*", "output": "", "name": "removeCommentsChar", "type": "tfn", "ret": 1},
+{"input": "abc#", "output": "abc", "name": "removeCommentsChar", "type": "tfn", "ret": 1}
 ]

@@ -3,20 +3,40 @@
 
 package transformations
 
-import stringsutil "github.com/ad3n/coraza/v3/internal/strings"
+import (
+	"strings"
+
+	stringsutil "github.com/ad3n/coraza/v3/internal/strings"
+)
 
 func removeCommentsChar(value string) (string, bool, error) {
 	inputLen := len(value)
-	res := make([]byte, 0, inputLen)
-	changed := false
-	for i := 0; i < inputLen; {
+	start := strings.IndexAny(value, "/*<-#")
+	if start < 0 {
+		return value, false, nil
+	}
+
+	for start < inputLen {
+		suffix := value[start:]
+		if suffix[0] == '#' || strings.HasPrefix(suffix, "/*") || strings.HasPrefix(suffix, "*/") || strings.HasPrefix(suffix, "<!--") || strings.HasPrefix(suffix, "--") {
+			break
+		}
+
+		start++
+	}
+
+	if start == inputLen {
+		return value, false, nil
+	}
+
+	res := make([]byte, start, inputLen)
+	copy(res, value[:start])
+	for i := start; i < inputLen; {
 		switch {
 		case value[i] == '/' && (i+1 < inputLen) && value[i+1] == '*':
 			i += 2
-			changed = true
 		case value[i] == '*' && (i+1 < inputLen) && value[i+1] == '/':
 			i += 2
-			changed = true
 		case value[i] == '<' &&
 			(i+1 < inputLen) &&
 			value[i+1] == '!' &&
@@ -25,22 +45,19 @@ func removeCommentsChar(value string) (string, bool, error) {
 			(i+3 < inputLen) &&
 			value[i+3] == '-':
 			i += 4
-			changed = true
 		case value[i] == '-' &&
 			(i+1 < inputLen) && value[i+1] == '-' &&
 			(i+2 < inputLen) && value[i+2] == '>':
 			i += 3
-			changed = true
 		case value[i] == '-' && (i+1 < inputLen) && value[i+1] == '-':
 			i += 2
-			changed = true
 		case value[i] == '#':
 			i += 1
-			changed = true
 		default:
 			res = append(res, value[i])
 			i += 1
 		}
 	}
-	return stringsutil.WrapUnsafe(res), changed, nil
+
+	return stringsutil.WrapUnsafe(res), true, nil
 }
