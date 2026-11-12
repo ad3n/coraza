@@ -184,6 +184,13 @@ func prefilterFunc(pattern string) func(string) bool {
 
 	lits := extractLiterals(re, caseInsensitive)
 	if lits == nil {
+		if required := requiredRunes(re); len(required) != 0 {
+			chars := string(required)
+			return func(s string) bool {
+				return (mml < 4 || len(s) >= mml) && strings.ContainsAny(s, chars)
+			}
+		}
+
 		// No literals extractable. Fall back to a length-only prefilter when
 		// the minimum match length is large enough to actually reject inputs.
 		// Most WAF field values are > 3 bytes, so thresholds below 4 are not
@@ -623,43 +630,7 @@ func rawExtractSuffixes(re *syntax.Regexp, ci bool) []string {
 		return result
 
 	case syntax.OpConcat:
-		// Try the full extractLiterals pipeline first (handles deeper nesting
-		// through the trieReconstruct fallback it already calls).
-		lits := extractLiterals(re, ci)
-		if lits != nil {
-			switch v := lits.(type) {
-			case allRequired:
-				// Only safe to return a single trie suffix when the concat
-				// collapses to exactly one contiguous literal. Multiple
-				// allRequired elements mean there are wildcards between them
-				// (e.g. "elect.*from" → allRequired{"elect","from"}). Joining
-				// them would produce "electfrom" — a phantom string that never
-				// appears contiguously in a real input — causing false negatives
-				// on valid matches like "select x from". Return nil here so the
-				// caller falls back to the safer anyRequired propagation instead.
-				if len(v) == 1 {
-					return []string{v[0]}
-				}
-				return nil
-			case anyRequired:
-				return []string(v)
-			case combinedRequired:
-				// For trie-reconstruction we need a suffix that is *always* present
-				// when this sub-concat fires. The .all elements are guaranteed;
-				// .any elements are only conditionally present (one of them must be
-				// present, but not a specific one). Returning a .any element would
-				// let the outer prefix combine with a wrong suffix (e.g. "s"+"execute"
-				// instead of "s"+"p_"+"execute" → "sp_execute"), producing a phantom
-				// literal that never appears contiguously in real input.
-				// Return the single longest .all element as the guaranteed suffix.
-				rep := longest([]string(v.all))
-				if rep == "" {
-					return nil
-				}
-				return []string{rep}
-			}
-		}
-		return nil
+		return []string(trieReconstruct(re, ci))
 
 	case syntax.OpCapture:
 		return rawExtractSuffixes(re.Sub[0], ci)
@@ -1266,4 +1237,75 @@ func extractExactMatch(re *syntax.Regexp) (lit string, ci bool) {
 	}
 
 	return string(middle.Rune), middle.Flags&syntax.FoldCase != 0
+}
+
+func requiredRunes(re *syntax.Regexp) []rune {
+	const limit = 16
+	switch re.Op {
+	case syntax.OpLiteral:
+		if len(re.Rune) == 0 {
+			return nil
+		}
+
+		r := re.Rune[len(re.Rune)-1]
+		result := []rune{r}
+		if re.Flags&syntax.FoldCase != 0 {
+			for folded := unicode.SimpleFold(r); folded != r; folded = unicode.SimpleFold(folded) {
+				result = append(result, folded)
+			}
+		}
+
+		return result
+	case syntax.OpCharClass:
+		var result []rune
+		for i := 0; i < len(re.Rune); i += 2 {
+			if re.Rune[i+1]-re.Rune[i]+1 > rune(limit-len(result)) {
+				return nil
+			}
+
+			for r := re.Rune[i]; r <= re.Rune[i+1]; r++ {
+				result = append(result, r)
+			}
+		}
+
+		return result
+	case syntax.OpConcat:
+		var result []rune
+		for _, sub := range re.Sub {
+			candidate := requiredRunes(sub)
+			if len(candidate) > 0 && (len(result) == 0 || len(candidate) <= len(result)) {
+				result = candidate
+			}
+		}
+
+		return result
+	case syntax.OpAlternate:
+		var result []rune
+		for _, sub := range re.Sub {
+			candidate := requiredRunes(sub)
+			if len(candidate) == 0 {
+				return nil
+			}
+
+			for _, r := range candidate {
+				if !slices.Contains(result, r) {
+					result = append(result, r)
+				}
+			}
+
+			if len(result) > limit {
+				return nil
+			}
+		}
+
+		return result
+	case syntax.OpCapture, syntax.OpPlus:
+		return requiredRunes(re.Sub[0])
+	case syntax.OpRepeat:
+		if re.Min > 0 {
+			return requiredRunes(re.Sub[0])
+		}
+	}
+
+	return nil
 }

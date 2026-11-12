@@ -67,12 +67,12 @@ func TestPrefilterFuncBuildability(t *testing.T) {
 		{"hello.*world", false, "literals around wildcard", "hello big world", "goodbye planet"},
 		{"(ab|cd)", false, "alternation with literals", "xabx", "xyz"},
 		{".*", true, "pure wildcard", "", ""},
-		{"\\d+", true, "digit class", "", ""},
+		{"\\d+", false, "digit class", "123", "abc"},
 		{"sleep\\s*\\(", false, "literal with optional whitespace", "sleep(1)", "wake(1)"},
 		{"(?:union\\s+select|insert\\s+into)", false, "CRS-style alternation", "union select 1", "update set x"},
 		{".", true, "single any-char", "", ""},
 		{"(a|.)", true, "alternation with wildcard branch", "", ""},
-		{"(?:ab|[0-9]+)", true, "alternation where one branch has no literal", "", ""},
+		{"(?:ab|[0-9]+)", false, "alternation with digit class", "123", "safe"},
 		{"(abc)+", false, "repeated literal", "xabcabc", "xyzxyz"},
 		{"(abc)?", true, "optional group", "", ""},
 		{"(abc)*", true, "zero-or-more group", "", ""},
@@ -121,6 +121,10 @@ func TestPrefilterNeverCausesFalseNegatives(t *testing.T) {
 		// Basic literals
 		{"hello", "hello world", true},
 		{"hello", "goodbye", false},
+		{`2(?:147|.225(?:07|11)e-308)`, "2.22511e-308", true},
+		{`2(?:147|.225(?:07|11)e-308)`, "2.22599e-308", false},
+		{`(?i)s(?:t(?:ore [0-9]+ flags|arttls)|elect)`, "STORE 2 FLAGS", true},
+		{`(?i)s(?:t(?:ore [0-9]+ flags|arttls)|elect)`, "STORE X FLAGS", false},
 
 		// Wildcards
 		{"hello.*world", "hello beautiful world", true},
@@ -1117,22 +1121,28 @@ func TestPrefilterCodePaths(t *testing.T) {
 		pass    string // input the prefilter must accept (skip if "")
 		reject  string // input the prefilter must reject (skip if "")
 	}{
+		{"required_class", `[0-9]+`, true, "123", "abc"},
+		{"required_obfuscated_letters", `(?i)a[ _]*b`, true, "A _B", "aaaa"},
+		{"required_alternate", `(?:a[ _]*b|[0-9]+)`, true, "7", "safe"},
+		{"required_unicode_fold", `(?i)k`, true, "K", "xyz"},
+		{"required_scoped_fold", `(?i:a)[ _]*b`, true, "A_b", "A_B"},
+
 		// --- minMatchLength edge cases ---
-		{"mml_rune_error", "\xef\xbf\xbd", false, "", ""},
+		{"mml_rune_error", "\xef\xbf\xbd", true, "\xff", "abc"},
 		{"mml_rune_error_plus_literal", "(?s)\xef\xbf\xbd" + "hello", true, "\xef\xbf\xbdhello!xx", "hello"},
-		{"mml_repeat_3_5", "a{3,5}", false, "", ""},
+		{"mml_repeat_3_5", "a{3,5}", true, "aaa", "bbb"},
 		{"mml_repeat_0_5", "a{0,5}", false, "", ""},
 
 		// --- allRequired paths ---
-		{"all_filtered_to_empty", "(?s)a.*", false, "", ""},
-		{"all_filtered_short", "(?s)a.*b", false, "", ""},
+		{"all_filtered_to_empty", "(?s)a.*", true, "abc", "xyz"},
+		{"all_filtered_short", "(?s)a.*b", true, "a--b", "aaaa"},
 		{"all_multi_CS", "(?s)hello.*world", true, "prefix hello middle world suffix", "prefix hello middle suffix"},
 		{"all_multi_CI", "(?si)hello.*world", true, "foo HELLO bar WORLD baz", "foo HELLO bar baz"},
 
 		// --- anyRequired paths ---
 		{"any_CS_2_elements", "(?s)(?:hello|world)", true, "contains hello here", "contains nothing here"},
 		{"any_CI_2_elements", "(?si)(?:hello|world)", true, "HELLO there", "nothing here"},
-		{"any_too_short_bailout", "(?s)(?:a|hello)", false, "", ""},
+		{"any_too_short_bailout", "(?s)(?:a|hello)", true, "a", "xyz"},
 		{"any_non_ascii_CI_bailout", "(?si)(?:café|naïve)", false, "", ""},
 		{"any_nested_alternation", "(?s)(?:hello|(?:world|test))", true, "test", "none"},
 
