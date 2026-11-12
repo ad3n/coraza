@@ -426,11 +426,7 @@ func TestContainsFoldASCII(t *testing.T) {
 	}
 }
 
-// TestBinaryRXBypassesPrefilter verifies that patterns containing non-UTF8 byte
-// sequences (e.g. \xac\xed\x00\x05) go through the binaryRX path and do NOT
-// get a prefilter attached. This is critical because rxprefilter.go only handles
-// standard regexp.Regexp, not binaryregexp.Regexp.
-func TestBinaryRXBypassesPrefilter(t *testing.T) {
+func TestBinaryRXPrefilter(t *testing.T) {
 	tests := []struct {
 		name    string
 		pattern string
@@ -461,28 +457,37 @@ func TestBinaryRXBypassesPrefilter(t *testing.T) {
 			input:   "normal text",
 			want:    false,
 		},
+		{name: "ascii_required_match", pattern: `(?i)https?:[^\xff]*\xff`, input: "HTTP:example\xff", want: true},
+		{name: "ascii_required_absent", pattern: `(?i)https?:[^\xff]*\xff`, input: "HTTPexample\xff", want: false},
+		{name: "alternate_shared_ascii", pattern: `(?:x:|y:)\xff`, input: "y:\xff", want: true},
+		{name: "alternate_unconstrained_branch", pattern: `x:|\xff`, input: "\xff", want: true},
+		{name: "optional_ascii", pattern: `:?\xff`, input: "\xff", want: true},
+		{name: "folded_ascii", pattern: `(?i)X\xff`, input: "x\xff", want: true},
+		{name: "required_repetition", pattern: `:{2,3}\xff`, input: "::\xff", want: true},
+		{name: "optional_repetition", pattern: `:{0,3}\xff`, input: "\xff", want: true},
 	}
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			opts := plugintypes.OperatorOptions{Arguments: tc.pattern}
-			op, err := newRX(opts)
-			if err != nil {
-				t.Fatal(err)
-			}
+		for _, enabled := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/prefilter=%t", tc.name, enabled), func(t *testing.T) {
+				opts := plugintypes.OperatorOptions{Arguments: tc.pattern, RxPreFilterEnabled: enabled}
+				op, err := newRX(opts)
+				if err != nil {
+					t.Fatal(err)
+				}
 
-			// Verify it's a binaryRX, not an rx with prefilter
-			if _, ok := op.(*binaryRX); !ok {
-				t.Fatalf("expected binaryRX for pattern %q, got %T", tc.pattern, op)
-			}
+				if _, ok := op.(*binaryRX); !ok {
+					t.Fatalf("expected binaryRX for pattern %q, got %T", tc.pattern, op)
+				}
 
-			waf := corazawaf.NewWAF()
-			tx := waf.NewTransaction()
-			tx.Capture = true
-			got := op.Evaluate(tx, tc.input)
-			if got != tc.want {
-				t.Errorf("Evaluate(%q, %q) = %v, want %v", tc.pattern, tc.input, got, tc.want)
-			}
-		})
+				waf := corazawaf.NewWAF()
+				tx := waf.NewTransaction()
+				tx.Capture = true
+				got := op.Evaluate(tx, tc.input)
+				if got != tc.want {
+					t.Errorf("Evaluate(%q, %q) = %v, want %v", tc.pattern, tc.input, got, tc.want)
+				}
+			})
+		}
 	}
 }
 
@@ -990,6 +995,9 @@ func FuzzPrefilterNoFalseNegatives(f *testing.F) {
 		"(ab)+",
 		"[a-z]+test",
 		"ハロー",
+		`(?i)https?:[^\xff]*\xff`,
+		`(?:x:|y:)\xff`,
+		`:?\xff`,
 	}
 	inputs := []string{
 		"GET /index.html HTTP/1.1",
@@ -1007,6 +1015,8 @@ func FuzzPrefilterNoFalseNegatives(f *testing.F) {
 		"abcdgh",
 		"ſelect",
 		"un café chaud",
+		"HTTP:example\xff",
+		"\xff",
 	}
 	for _, p := range patterns {
 		for _, inp := range inputs {
@@ -1018,6 +1028,14 @@ func FuzzPrefilterNoFalseNegatives(f *testing.F) {
 		// Cap lengths to avoid expensive regex evaluations that stall the fuzzer.
 		if len(pattern) > 256 || len(input) > 512 {
 			return
+		}
+
+		op, binaryErr := newBinaryRX(plugintypes.OperatorOptions{Arguments: pattern, RxPreFilterEnabled: true})
+		if binaryErr == nil {
+			binary := op.(*binaryRX)
+			if binary.required != "" && !strings.ContainsAny(input, binary.required) && binary.re.MatchString(input) {
+				t.Fatalf("binary prefilter false negative: pattern=%q input=%q", pattern, input)
+			}
 		}
 
 		// Skip invalid regex patterns

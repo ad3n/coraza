@@ -7,13 +7,16 @@ package operators
 
 import (
 	"fmt"
+	"math/bits"
 	"regexp"
 	"regexp/syntax"
 	"strconv"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"rsc.io/binaryregexp"
+	binarysyntax "rsc.io/binaryregexp/syntax"
 
 	"github.com/ad3n/coraza/v3/experimental/plugins/plugintypes"
 )
@@ -41,26 +44,36 @@ import (
 // # Capture groups for reuse in actions
 // SecRule REQUEST_URI "@rx ^/api/v(\d+)" "id:182,setvar:tx.api_version=%{TX.1}"
 // ```
-type rx struct {
-	re           *regexp.Regexp
-	minLen       int
-	prefilter    func(string) bool // returns true if regex might match; nil = no prefilter
-	exactMatch   string            // non-empty: pattern is ^literal$; skip NFA entirely
-	exactMatchCI bool              // true when exactMatch uses case-insensitive comparison
-}
+type (
+	rx struct {
+		re           *regexp.Regexp
+		minLen       int
+		prefilter    func(string) bool // returns true if regex might match; nil = no prefilter
+		exactMatch   string            // non-empty: pattern is ^literal$; skip NFA entirely
+		exactMatchCI bool              // true when exactMatch uses case-insensitive comparison
+	}
 
-// rxCompiled holds all compile-time artifacts for a regex pattern so they can
-// be computed once and shared via memoize when the same pattern appears in
-// multiple rules.
-type rxCompiled struct {
-	re           *regexp.Regexp
-	minLen       int
-	prefilter    func(string) bool
-	exactMatch   string
-	exactMatchCI bool
-}
+	// rxCompiled holds all compile-time artifacts for a regex pattern so they can
+	// be computed once and shared via memoize when the same pattern appears in
+	// multiple rules.
+	rxCompiled struct {
+		re           *regexp.Regexp
+		minLen       int
+		prefilter    func(string) bool
+		exactMatch   string
+		exactMatchCI bool
+	}
 
-var _ plugintypes.Operator = (*rx)(nil)
+	binaryRX struct {
+		re       *binaryregexp.Regexp
+		required string
+	}
+)
+
+var (
+	_ plugintypes.Operator = (*rx)(nil)
+	_ plugintypes.Operator = (*binaryRX)(nil)
+)
 
 func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	var data string
@@ -187,25 +200,42 @@ func (o *rx) Evaluate(tx plugintypes.TransactionState, value string) bool {
 
 }
 
-// binaryRx is exactly the same as rx, but using the binaryregexp package for matching
-// arbitrary bytes.
-type binaryRX struct {
-	re *binaryregexp.Regexp
-}
-
-var _ plugintypes.Operator = (*binaryRX)(nil)
-
 func newBinaryRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
-	data := options.Arguments
+	key := fmt.Sprintf("binaryrx:%v:%s", options.RxPreFilterEnabled, options.Arguments)
+	compiled, err := memoizeDo(options.Memoizer, key, func() (any, error) {
+		re, err := binaryregexp.Compile(options.Arguments)
+		if err != nil {
+			return nil, err
+		}
 
-	re, err := memoizeDo(options.Memoizer, memoizeKey("binaryrx", data), func() (any, error) { return binaryregexp.Compile(data) })
+		op := &binaryRX{re: re}
+		if options.RxPreFilterEnabled {
+			parsed, err := binarysyntax.Parse(options.Arguments, binarysyntax.Perl)
+			if err == nil {
+				required := requiredBinaryASCII(parsed)
+				for i, mask := range required {
+					if mask != 0 {
+						op.required = string(rune(i*64 + bits.TrailingZeros64(mask)))
+						break
+					}
+				}
+			}
+		}
+
+		return op, nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	return &binaryRX{re: re.(*binaryregexp.Regexp)}, nil
+
+	return compiled.(*binaryRX), nil
 }
 
 func (o *binaryRX) Evaluate(tx plugintypes.TransactionState, value string) bool {
+	if o.required != "" && !strings.Contains(value, o.required) {
+		return false
+	}
+
 	if tx.Capturing() {
 		match := o.re.FindStringSubmatch(value)
 		if len(match) == 0 {
@@ -273,4 +303,46 @@ func matchesArbitraryBytes(expr string) bool {
 	}
 
 	return !utf8.Valid(decoded)
+}
+
+func requiredBinaryASCII(re *binarysyntax.Regexp) [2]uint64 {
+	var result [2]uint64
+	switch re.Op {
+	case binarysyntax.OpLiteral:
+		for _, r := range re.Rune {
+			if r < utf8.RuneSelf && (re.Flags&binarysyntax.FoldCase == 0 || unicode.SimpleFold(r) == r) {
+				result[r/64] |= 1 << (r % 64)
+			}
+		}
+	case binarysyntax.OpCharClass:
+		if len(re.Rune) == 2 && re.Rune[0] == re.Rune[1] && re.Rune[0] < utf8.RuneSelf {
+			r := re.Rune[0]
+			result[r/64] |= 1 << (r % 64)
+		}
+	case binarysyntax.OpConcat:
+		for _, sub := range re.Sub {
+			candidate := requiredBinaryASCII(sub)
+			result[0] |= candidate[0]
+			result[1] |= candidate[1]
+		}
+	case binarysyntax.OpAlternate:
+		for i, sub := range re.Sub {
+			candidate := requiredBinaryASCII(sub)
+			if i == 0 {
+				result = candidate
+				continue
+			}
+
+			result[0] &= candidate[0]
+			result[1] &= candidate[1]
+		}
+	case binarysyntax.OpCapture, binarysyntax.OpPlus:
+		return requiredBinaryASCII(re.Sub[0])
+	case binarysyntax.OpRepeat:
+		if re.Min > 0 {
+			return requiredBinaryASCII(re.Sub[0])
+		}
+	}
+
+	return result
 }
