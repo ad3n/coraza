@@ -16,8 +16,6 @@ import (
 // MatchData works like VariableKey but is used for logging,
 // so it contains the collection as a string, and its value
 type MatchData struct {
-	// Variable
-	Variable_ variables.RuleVariable
 	// Key of the variable, blank if no key is required
 	Key_ string
 	// Value of the current VARIABLE:KEY
@@ -29,6 +27,8 @@ type MatchData struct {
 	// Keeps track of the chain depth in which the data matched.
 	// Multiphase specific field
 	ChainLevel_ int
+	// Variable
+	Variable_ variables.RuleVariable
 }
 
 var _ types.MatchData = (*MatchData)(nil)
@@ -80,6 +80,9 @@ var DisruptiveActionMap = map[string]DisruptiveAction{
 // MatchedRule contains a list of macro expanded messages,
 // matched variables and a pointer to the rule
 type MatchedRule struct {
+	Rule_ types.RuleMetadata
+
+	Context_ context.Context
 	// Macro expanded message
 	Message_ string
 	// Macro expanded logdata
@@ -88,15 +91,6 @@ type MatchedRule struct {
 	URI_ string
 	// Transaction id
 	TransactionID_ string
-	// Is disruptive
-	Disruptive_ bool
-	// Name of the disruptive action
-	// Note: not exposed in coraza v3.0.*
-	DisruptiveAction_ DisruptiveAction
-	// Is meant to be logged to error log
-	Log_ bool
-	// Is meant to be included in audit log
-	Audit_ bool
 	// Server IP address
 	ServerIPAddress_ string
 	// Client IP address
@@ -104,9 +98,15 @@ type MatchedRule struct {
 	// A slice of matched variables
 	MatchedDatas_ []types.MatchData
 
-	Rule_ types.RuleMetadata
-
-	Context_ context.Context
+	// Name of the disruptive action
+	// Note: not exposed in coraza v3.0.*
+	DisruptiveAction_ DisruptiveAction
+	// Is disruptive
+	Disruptive_ bool
+	// Is meant to be logged to error log
+	Log_ bool
+	// Is meant to be included in audit log
+	Audit_ bool
 }
 
 var _ types.MatchedRule = (*MatchedRule)(nil)

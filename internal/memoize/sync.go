@@ -13,8 +13,8 @@ import (
 
 type entry struct {
 	value   any
-	mu      sync.Mutex
 	owners  map[uint64]struct{}
+	mu      sync.Mutex
 	deleted bool
 }
 

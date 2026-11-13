@@ -43,14 +43,12 @@ import (
 // It is safe to manage multiple transactions but transactions themselves are not
 // thread safe
 type Transaction struct {
-	// Transaction ID
-	id string
+	variables TransactionVariables
 
 	// The context associated to the transaction.
 	context context.Context
 
-	// Contains the list of matched rules and associated match information
-	matchedRules []types.MatchedRule
+	debugLogger debuglog.Logger
 
 	// True if the transaction has been disrupted by any rule
 	interruption *types.Interruption
@@ -61,37 +59,6 @@ type Transaction struct {
 	// caused an interruption if the engine was On).
 	detectionOnlyInterruption *types.Interruption
 
-	// This is used to store log messages
-	// Deprecated since Coraza 3.0.5: this variable is not used, logdata values are stored in the matched rules
-	Logdata string
-
-	// Rules will be skipped after a rule with this SecMarker is found
-	SkipAfter string
-
-	// AllowType is used by the allow disruptive action to skip evaluating rules after being allowed
-	// Note: Rely on tx.Allow(allowType) for tweaking this field. This field is exposed for backwards
-	// compatibility, but it is not recommended to be used directly.
-	// TODO(4.x): Evaluate to make it private
-	AllowType corazatypes.AllowType
-
-	// Copies from the WAF instance that may be overwritten by the ctl action
-	AuditEngine               types.AuditEngineStatus
-	AuditLogParts             types.AuditLogParts
-	AuditLogFormat            string
-	ForceRequestBodyVariable  bool
-	RequestBodyAccess         bool
-	RequestBodyLimit          int64
-	ForceResponseBodyVariable bool
-	ResponseBodyAccess        bool
-	ResponseBodyLimit         int64
-	RuleEngine                types.RuleEngineStatus
-	HashEngine                bool
-	HashEnforcement           bool
-
-	// Stores the last phase that was evaluated
-	// Used by allow to skip phases
-	lastPhase types.RulePhase
-
 	// Handles request body buffers
 	requestBodyBuffer *BodyBuffer
 
@@ -101,23 +68,11 @@ type Transaction struct {
 	// Rules with this id are going to be skipped while processing a phase
 	ruleRemoveByID map[int]struct{}
 
-	// ruleRemoveByIDRanges stores ranges of rule IDs to be skipped during a phase.
-	// Ranges avoid expanding all IDs into the ruleRemoveByID map.
-	ruleRemoveByIDRanges [][2]int
-
 	// ruleRemoveTargetByID is used by ctl to remove rule targets by id during the
 	// transaction. All other "target removers" like "ByTag" are an abstraction of "ById"
 	// For example, if you want to remove REQUEST_HEADERS:User-Agent from rule 85:
 	// {85: {variables.RequestHeaders, "user-agent"}}
 	ruleRemoveTargetByID map[int][]ruleVariableParams
-
-	// Will skip this number of rules, this value will be decreased on each skip
-	Skip int
-
-	// Actions with capture features will read the capture state from this field
-	// We have currently removed this feature as Capture will always run
-	// We must reuse it in the future
-	Capture bool
 
 	// Contains duration in useconds per phase
 	stopWatches map[types.RulePhase]int64
@@ -125,18 +80,65 @@ type Transaction struct {
 	// Contains a WAF instance for the current transaction
 	WAF *WAF
 
-	debugLogger debuglog.Logger
+	transformationCache map[transformationKey]transformationValue
+	// Transaction ID
+	id string
+
+	// This is used to store log messages
+	// Deprecated since Coraza 3.0.5: this variable is not used, logdata values are stored in the matched rules
+	Logdata string
+
+	// Rules will be skipped after a rule with this SecMarker is found
+	SkipAfter string
+
+	AuditLogFormat string
+
+	// Contains the list of matched rules and associated match information
+	matchedRules []types.MatchedRule
+
+	AuditLogParts types.AuditLogParts
+
+	// ruleRemoveByIDRanges stores ranges of rule IDs to be skipped during a phase.
+	// Ranges avoid expanding all IDs into the ruleRemoveByID map.
+	ruleRemoveByIDRanges [][2]int
+
+	// AllowType is used by the allow disruptive action to skip evaluating rules after being allowed
+	// Note: Rely on tx.Allow(allowType) for tweaking this field. This field is exposed for backwards
+	// compatibility, but it is not recommended to be used directly.
+	// TODO(4.x): Evaluate to make it private
+	AllowType corazatypes.AllowType
+
+	// Copies from the WAF instance that may be overwritten by the ctl action
+	AuditEngine       types.AuditEngineStatus
+	RequestBodyLimit  int64
+	ResponseBodyLimit int64
+	RuleEngine        types.RuleEngineStatus
+
+	// Stores the last phase that was evaluated
+	// Used by allow to skip phases
+	lastPhase types.RulePhase
+
+	// Will skip this number of rules, this value will be decreased on each skip
+	Skip int
 
 	// Timestamp of the request
 	Timestamp int64
 
+	ForceRequestBodyVariable  bool
+	RequestBodyAccess         bool
+	ForceResponseBodyVariable bool
+	ResponseBodyAccess        bool
+	HashEngine                bool
+	HashEnforcement           bool
+
+	// Actions with capture features will read the capture state from this field
+	// We have currently removed this feature as Capture will always run
+	// We must reuse it in the future
+	Capture bool
+
 	// When a rule matches and contains r.Audit = true, this will be set to true
 	// it will write to the audit log
 	audit bool
-
-	variables TransactionVariables
-
-	transformationCache map[transformationKey]transformationValue
 }
 
 func (tx *Transaction) ID() string {

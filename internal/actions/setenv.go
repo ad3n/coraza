@@ -27,8 +27,8 @@ import (
 // Header set Set-Cookie "%{httponly_cookie}e; HTTPOnly" env=httponly_cookie
 // ```
 type setenvFn struct {
-	key   string
 	value macro.Macro
+	key   string
 }
 
 func (a *setenvFn) Init(_ plugintypes.RuleMetadata, data string) error {

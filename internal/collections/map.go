@@ -15,13 +15,13 @@ import (
 
 // Map is a default collection.Map.
 type Map struct {
-	isCaseSensitive bool
-	data            map[string][]keyValue
-	variable        variables.RuleVariable
+	data map[string][]keyValue
 	// totalValues tracks TotalValues incrementally so it stays O(1) to read;
 	// summing len(values) across every key on each call made checkArgumentLimit
 	// (called once per Add) quadratic in the number of distinct keys.
-	totalValues int
+	totalValues     int
+	isCaseSensitive bool
+	variable        variables.RuleVariable
 }
 
 var _ collection.Map = &Map{}

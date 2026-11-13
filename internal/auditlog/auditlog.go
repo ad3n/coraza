@@ -68,9 +68,11 @@ var _ plugintypes.AuditLog = (*Log)(nil)
 // Transaction contains transaction specific
 // information
 type Transaction struct {
+	Request_  *TransactionRequest  `json:"request,omitempty"`
+	Response_ *TransactionResponse `json:"response,omitempty"`
+	Producer_ *TransactionProducer `json:"producer,omitempty"`
 	// Timestamp "02/Jan/2006:15:04:20 -0700" format
-	Timestamp_     string `json:"timestamp"`
-	UnixTimestamp_ int64  `json:"unix_timestamp"`
+	Timestamp_ string `json:"timestamp"`
 
 	// Unique ID
 	ID_ string `json:"id"`
@@ -78,15 +80,14 @@ type Transaction struct {
 	// Client IP Address string representation
 	ClientIP_ string `json:"client_ip"`
 
-	ClientPort_      int                  `json:"client_port"`
-	HostIP_          string               `json:"host_ip"`
-	HostPort_        int                  `json:"host_port"`
-	ServerID_        string               `json:"server_id"`
-	Request_         *TransactionRequest  `json:"request,omitempty"`
-	Response_        *TransactionResponse `json:"response,omitempty"`
-	Producer_        *TransactionProducer `json:"producer,omitempty"`
-	HighestSeverity_ string               `json:"highest_severity"`
-	IsInterrupted_   bool                 `json:"is_interrupted"`
+	HostIP_          string `json:"host_ip"`
+	ServerID_        string `json:"server_id"`
+	HighestSeverity_ string `json:"highest_severity"`
+	UnixTimestamp_   int64  `json:"unix_timestamp"`
+
+	ClientPort_    int  `json:"client_port"`
+	HostPort_      int  `json:"host_port"`
+	IsInterrupted_ bool `json:"is_interrupted"`
 }
 
 var _ plugintypes.AuditLogTransaction = Transaction{}
@@ -154,10 +155,10 @@ func (t Transaction) IsInterrupted() bool {
 // TransactionResponse contains response specific
 // information
 type TransactionResponse struct {
-	Protocol_ string              `json:"protocol"`
-	Status_   int                 `json:"status"`
 	Headers_  map[string][]string `json:"headers"`
+	Protocol_ string              `json:"protocol"`
 	Body_     string              `json:"body"`
+	Status_   int                 `json:"status"`
 }
 
 var _ plugintypes.AuditLogTransactionResponse = (*TransactionResponse)(nil)
@@ -258,14 +259,14 @@ func (tp *TransactionProducer) Rulesets() []string {
 // TransactionRequest contains request specific
 // information
 type TransactionRequest struct {
+	Headers_     map[string][]string                           `json:"headers"`
+	Args_        *collections.ConcatKeyed                      `json:"args"`
 	Method_      string                                        `json:"method"`
 	Protocol_    string                                        `json:"protocol"`
 	URI_         string                                        `json:"uri"`
 	HTTPVersion_ string                                        `json:"http_version"`
-	Headers_     map[string][]string                           `json:"headers"`
 	Body_        string                                        `json:"body"`
 	Files_       []plugintypes.AuditLogTransactionRequestFiles `json:"files"`
-	Args_        *collections.ConcatKeyed                      `json:"args"`
 	Length_      int32                                         `json:"length"`
 }
 
@@ -342,8 +343,8 @@ func (tr *TransactionRequest) Length() int32 {
 // for the uploaded files using multipart forms
 type TransactionRequestFiles struct {
 	Name_ string `json:"name"`
-	Size_ int64  `json:"size"`
 	Mime_ string `json:"mime"`
+	Size_ int64  `json:"size"`
 }
 
 var _ plugintypes.AuditLogTransactionRequestFiles = (*TransactionRequestFiles)(nil)
@@ -363,10 +364,10 @@ func (trf TransactionRequestFiles) Mime() string {
 // Message contains information about the triggered
 // rules
 type Message struct {
+	Data_         *MessageData `json:"data"`
 	Actionset_    string       `json:"actionset"`
 	Message_      string       `json:"message"`
 	ErrorMessage_ string       `json:"error_message"`
-	Data_         *MessageData `json:"data"`
 }
 
 var _ plugintypes.AuditLogMessage = Message{}
@@ -391,17 +392,17 @@ func (m Message) Data() plugintypes.AuditLogMessageData {
 // rules in detail
 type MessageData struct {
 	File_     string             `json:"file"`
-	Line_     int                `json:"line"`
-	ID_       int                `json:"id"`
 	Rev_      string             `json:"rev"`
 	Msg_      string             `json:"msg"`
 	Data_     string             `json:"data"`
-	Severity_ types.RuleSeverity `json:"severity"`
 	Ver_      string             `json:"ver"`
+	Raw_      string             `json:"raw"`
+	Tags_     []string           `json:"tags"`
+	Line_     int                `json:"line"`
+	ID_       int                `json:"id"`
+	Severity_ types.RuleSeverity `json:"severity"`
 	Maturity_ int                `json:"maturity"`
 	Accuracy_ int                `json:"accuracy"`
-	Tags_     []string           `json:"tags"`
-	Raw_      string             `json:"raw"`
 }
 
 var _ plugintypes.AuditLogMessageData = (*MessageData)(nil)

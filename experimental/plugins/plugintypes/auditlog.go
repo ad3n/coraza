@@ -105,20 +105,20 @@ type AuditLogMessageData interface {
 
 // AuditLogConfig is the configuration of a Writer.
 type AuditLogConfig struct {
+
+	// Formatter is the formatter to use when writing formatted audit logs.
+	Formatter AuditLogFormatter
 	// Target is the path to the file to write the raw audit log to.
 	Target string
-
-	// FileMode is the mode to use when creating File.
-	FileMode fs.FileMode
 
 	// Dir is the path to the directory to write formatted audit logs to.
 	Dir string
 
+	// FileMode is the mode to use when creating File.
+	FileMode fs.FileMode
+
 	// DirMode is the mode to use when creating Dir.
 	DirMode fs.FileMode
-
-	// Formatter is the formatter to use when writing formatted audit logs.
-	Formatter AuditLogFormatter
 }
 
 // AuditLogWriter is the interface for all log writers.

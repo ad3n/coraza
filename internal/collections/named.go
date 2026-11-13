@@ -96,8 +96,8 @@ func (c *NamedCollection) String() string {
 }
 
 type NamedCollectionNames struct {
-	variable   variables.RuleVariable
 	collection *NamedCollection
+	variable   variables.RuleVariable
 }
 
 func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {

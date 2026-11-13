@@ -20,8 +20,8 @@ import (
 type httpsWriter struct {
 	io.Closer
 	formatter plugintypes.AuditLogFormatter
-	url       string
 	client    *http.Client
+	url       string
 }
 
 func (h *httpsWriter) Init(c plugintypes.AuditLogConfig) error {

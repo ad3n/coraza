@@ -747,9 +747,9 @@ const anyRequiredMaxN = 256
 //   - Zero allocations (AC's Iter/Match pattern allocates per call)
 //   - Better cache behavior (256-byte table vs large DFA transition table)
 type indexedMatcher struct {
-	shift      [256]uint8    // shift distance per byte value; 0 = candidate position
 	endBuckets [256][]string // needles grouped by their byte at position minLen-1
 	minLen     int
+	shift      [256]uint8 // shift distance per byte value; 0 = candidate position
 	ci         bool
 }
 

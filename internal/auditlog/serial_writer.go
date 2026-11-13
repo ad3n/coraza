@@ -14,8 +14,8 @@ import (
 // serialWriter is used to store logs in a single file
 type serialWriter struct {
 	io.Closer
-	logger    log.Logger
 	formatter plugintypes.AuditLogFormatter
+	logger    log.Logger
 }
 
 func (sl *serialWriter) Init(c plugintypes.AuditLogConfig) error {

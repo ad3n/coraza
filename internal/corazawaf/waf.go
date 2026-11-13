@@ -53,47 +53,34 @@ const (
 // All WAF instance fields are immutable, if you update any
 // of them in runtime you might create concurrency issues
 type WAF struct {
-	txPool       sync.Pool
-	bodyCopyPool sync.Pool
+
+	// AuditLogWriterConfig is configuration of audit logging, populated by multiple directives and consumed by
+	// SecAuditLog.
+	AuditLogWriterConfig plugintypes.AuditLogConfig
 
 	// ruleGroup object, contains all rules and helpers
 	Rules RuleGroup
 
-	// If true, transactions will have access to the request body
-	RequestBodyAccess bool
+	txPool       sync.Pool
+	bodyCopyPool sync.Pool
 
-	// Request body page file limit
-	RequestBodyLimit int64
+	// Used for the debug logger
+	Logger debuglog.Logger
 
-	// Request body JSON recursive depth limit
-	RequestBodyJsonDepthLimit int
+	auditLogWriter plugintypes.AuditLogWriter
 
 	// Request body in memory limit
 	requestBodyInMemoryLimit *int64
 
-	// If true, transactions will have access to the response body
-	ResponseBodyAccess bool
+	ErrorLogCb func(rule types.MatchedRule)
 
-	// Response body memory limit
-	ResponseBodyLimit int64
+	// Contains the regular expression for relevant status audit logging
+	AuditLogRelevantStatus *regexp.Regexp
 
-	// Response body JSON recursive depth limit
-	ResponseBodyJsonDepthLimit int
-
-	// Defines if rules are going to be evaluated
-	RuleEngine types.RuleEngineStatus
-
-	// Responses will only be loaded if mime is listed here
-	ResponseBodyMimeTypes []string
+	memoizer *memoize.Memoizer
 
 	// Web Application id, apps sharing the same id will share persistent collections
 	WebAppID string
-
-	// Add significant rule components to audit log
-	ComponentNames []string
-
-	// If true WAF engine will fail when remote rules cannot be loaded
-	AbortOnRemoteRulesFail bool
 
 	// Instructs the waf to change the Server response header
 	ServerSignature string
@@ -107,23 +94,8 @@ type WAF struct {
 	// Path to store data files (ex. cache)
 	DataDir string
 
-	// UploadKeepFiles controls whether uploaded files are kept after the transaction.
-	// On: always keep, Off: always delete (default), RelevantOnly: keep only if log-relevant rules matched (excluding nolog rules).
-	UploadKeepFiles types.UploadKeepFilesStatus
-	// UploadFileMode instructs the waf to set the file mode for uploaded files
-	UploadFileMode fs.FileMode
-	// UploadFileLimit is the maximum size of the uploaded file to be stored
-	UploadFileLimit int
 	// UploadDir is the directory where the uploaded files will be stored
 	UploadDir string
-
-	// Request body in memory limit excluding the size of any files being transported in the request.
-	// TODO: SecRequestBodyNoFilesLimit directive is retrieving the value, but no logic based on it is implemented. See https://github.com/corazawaf/coraza/issues/896
-	RequestBodyNoFilesLimit int64
-
-	RequestBodyLimitAction types.BodyLimitAction
-
-	ResponseBodyLimitAction types.BodyLimitAction
 
 	ArgumentSeparator string
 
@@ -135,47 +107,78 @@ type WAF struct {
 	// version on audit logs
 	ProducerConnectorVersion string
 
-	// Used for the debug logger
-	Logger debuglog.Logger
+	// Audit log format
+	AuditLogFormat string
 
-	ErrorLogCb func(rule types.MatchedRule)
+	// Responses will only be loaded if mime is listed here
+	ResponseBodyMimeTypes []string
 
-	// Audit mode status
-	AuditEngine types.AuditEngineStatus
+	// Add significant rule components to audit log
+	ComponentNames []string
 
 	// Array of logging parts to be used
 	AuditLogParts types.AuditLogParts
 
-	// Audit log format
-	AuditLogFormat string
+	// Request body page file limit
+	RequestBodyLimit int64
 
-	// Contains the regular expression for relevant status audit logging
-	AuditLogRelevantStatus *regexp.Regexp
+	// Request body JSON recursive depth limit
+	RequestBodyJsonDepthLimit int
 
-	auditLogWriter plugintypes.AuditLogWriter
+	// Response body memory limit
+	ResponseBodyLimit int64
 
-	// AuditLogWriterConfig is configuration of audit logging, populated by multiple directives and consumed by
-	// SecAuditLog.
-	AuditLogWriterConfig plugintypes.AuditLogConfig
+	// Response body JSON recursive depth limit
+	ResponseBodyJsonDepthLimit int
 
-	auditLogWriterInitialized bool
+	// Defines if rules are going to be evaluated
+	RuleEngine types.RuleEngineStatus
+
+	// UploadKeepFiles controls whether uploaded files are kept after the transaction.
+	// On: always keep, Off: always delete (default), RelevantOnly: keep only if log-relevant rules matched (excluding nolog rules).
+	UploadKeepFiles types.UploadKeepFilesStatus
+	// UploadFileLimit is the maximum size of the uploaded file to be stored
+	UploadFileLimit int
+
+	// Request body in memory limit excluding the size of any files being transported in the request.
+	// TODO: SecRequestBodyNoFilesLimit directive is retrieving the value, but no logic based on it is implemented. See https://github.com/corazawaf/coraza/issues/896
+	RequestBodyNoFilesLimit int64
+
+	RequestBodyLimitAction types.BodyLimitAction
+
+	ResponseBodyLimitAction types.BodyLimitAction
+
+	// Audit mode status
+	AuditEngine types.AuditEngineStatus
 
 	// Configures the maximum number of ARGS that will be accepted for processing.
 	ArgumentLimit int
 
+	memoizerID uint64
+	closeOnce  gosync.Once
+	// UploadFileMode instructs the waf to set the file mode for uploaded files
+	UploadFileMode fs.FileMode
+
+	// If true, transactions will have access to the request body
+	RequestBodyAccess bool
+
+	// If true, transactions will have access to the response body
+	ResponseBodyAccess bool
+
+	// If true WAF engine will fail when remote rules cannot be loaded
+	AbortOnRemoteRulesFail bool
+
+	auditLogWriterInitialized bool
+
 	// RxPreFilterEnabled controls whether the @rx operator uses
 	// literal pre-filtering. Set by the SecRxPreFilter directive.
 	RxPreFilterEnabled bool
-
-	memoizerID uint64
-	memoizer   *memoize.Memoizer
-	closeOnce  gosync.Once
 }
 
 // Options is used to pass options to the WAF instance
 type Options struct {
-	ID      string
 	Context context.Context
+	ID      string
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance

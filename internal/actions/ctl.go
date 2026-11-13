@@ -114,11 +114,11 @@ const (
 //
 // ```
 type ctlFn struct {
-	action     ctlFunctionType
-	value      string
-	collection variables.RuleVariable
-	colKey     string
 	colKeyRx   *regexp.Regexp
+	value      string
+	colKey     string
+	action     ctlFunctionType
+	collection variables.RuleVariable
 }
 
 func (a *ctlFn) Init(m plugintypes.RuleMetadata, data string) error {

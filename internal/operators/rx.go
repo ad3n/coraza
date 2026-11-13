@@ -47,10 +47,10 @@ import (
 type (
 	rx struct {
 		re           *regexp.Regexp
-		minLen       int
 		prefilter    func(string) bool // returns true if regex might match; nil = no prefilter
 		exactMatch   string            // non-empty: pattern is ^literal$; skip NFA entirely
-		exactMatchCI bool              // true when exactMatch uses case-insensitive comparison
+		minLen       int
+		exactMatchCI bool // true when exactMatch uses case-insensitive comparison
 	}
 
 	// rxCompiled holds all compile-time artifacts for a regex pattern so they can
@@ -58,9 +58,9 @@ type (
 	// multiple rules.
 	rxCompiled struct {
 		re           *regexp.Regexp
-		minLen       int
 		prefilter    func(string) bool
 		exactMatch   string
+		minLen       int
 		exactMatchCI bool
 	}
 

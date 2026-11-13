@@ -17,8 +17,8 @@ import (
 // It is not concurrent safe, so it's not recommended to use it
 // after compilation
 type RuleGroup struct {
-	rules    []Rule
 	observer func(rule types.RuleMetadata)
+	rules    []Rule
 }
 
 // Add a rule to the collection

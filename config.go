@@ -95,18 +95,18 @@ type wafRule struct {
 // int is a signed integer type that is at least 32 bits in size (platform-dependent size).
 // We still basically assume 64-bit usage where int are big sizes.
 type wafConfig struct {
+	debugLogger              debuglog.Logger
+	fsRoot                   fs.FS
 	ruleObserver             func(rule types.RuleMetadata)
-	rules                    []wafRule
 	auditLog                 *auditLogConfig
-	requestBodyAccess        bool
 	requestBodyLimit         *int
 	requestBodyInMemoryLimit *int
-	responseBodyAccess       bool
 	responseBodyLimit        *int
-	responseBodyMimeTypes    []string
-	debugLogger              debuglog.Logger
 	errorCallback            func(rule types.MatchedRule)
-	fsRoot                   fs.FS
+	rules                    []wafRule
+	responseBodyMimeTypes    []string
+	requestBodyAccess        bool
+	responseBodyAccess       bool
 }
 
 func (c *wafConfig) WithRules(rules ...*corazawaf.Rule) WAFConfig {
@@ -202,9 +202,9 @@ func (c *wafConfig) WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig {
 }
 
 type auditLogConfig struct {
-	relevantOnly bool
-	parts        types.AuditLogParts
 	writer       plugintypes.AuditLogWriter
+	parts        types.AuditLogParts
+	relevantOnly bool
 }
 
 func (c *auditLogConfig) LogRelevantOnly() AuditLogConfig {

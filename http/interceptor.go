@@ -38,8 +38,8 @@ func (h *hijackerTracker) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 type rwInterceptor struct {
 	w                             http.ResponseWriter
 	tx                            types.Transaction
-	statusCode                    int
 	proto                         string
+	statusCode                    int
 	isWriteHeaderFlush            bool
 	wroteHeader                   bool
 	wroteBufferedBodyToDownstream bool

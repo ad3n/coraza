@@ -41,12 +41,12 @@ SecRule REQUEST_HEADERS:User-Agent "@pm grabber masscan" "id:9131,phase:1,t:none
 
 // Config holds the configuration for running the end-to-end tests.
 type Config struct {
-	// NulledBody indicates whether interruptions at response body phase are allowed to return 200 (Instead of 403), but with a body full of null bytes.
-	NulledBody bool
 	// ProxiedEntrypoint is the proxy endpoint used to perform requests.
 	ProxiedEntrypoint string
 	// HttpbinEntrypoint is the upstream httpbin endpoint, used for health checking reasons.
 	HttpbinEntrypoint string
+	// NulledBody indicates whether interruptions at response body phase are allowed to return 200 (Instead of 403), but with a body full of null bytes.
+	NulledBody bool
 }
 
 type healthCheck struct {
@@ -57,18 +57,18 @@ type healthCheck struct {
 
 // testCase represents a single E2E test specification
 type testCase struct {
-	name               string
-	requestURL         string
 	requestHeaders     map[string]string
-	requestBody        string
-	requestMethod      string
 	expectedStatusCode statusCodeExpectation
 	expectedBody       bodyExpectation
 	// streamCheck, when set, switches the runner to incremental read mode.
 	// The checker receives the live *http.Response and is responsible for
 	// consuming/validating the body progressively (e.g., verifying streaming).
 	// If streamCheck is set, expectedBody is ignored.
-	streamCheck StreamCheck
+	streamCheck   StreamCheck
+	name          string
+	requestURL    string
+	requestBody   string
+	requestMethod string
 }
 
 // statusCodeExpectation is a function that checks the status code of a response

@@ -23,11 +23,11 @@ import (
 // ruleActionParams is used as a wrapper to store the action name
 // and parameters, basically for logging purposes.
 type ruleActionParams struct {
-	// The name of the action, used for logging
-	Name string
 
 	// The action to be executed
 	Function plugintypes.Action
+	// The name of the action, used for logging
+	Name string
 }
 
 // Operator is a container for an operator,
@@ -57,11 +57,6 @@ type ruleVariableException struct {
 // to get values from the transaction's variables
 // It supports xml, regex, exceptions and many more features
 type ruleVariableParams struct {
-	// If true, the count of results will be returned
-	Count bool
-
-	// The VARIABLE that will be requested
-	Variable variables.RuleVariable
 
 	// The key for the variable that is going to be requested
 	// If nil, KeyStr is going to be used
@@ -73,6 +68,11 @@ type ruleVariableParams struct {
 
 	// A slice of key exceptions
 	Exceptions []ruleVariableException
+	// If true, the count of results will be returned
+	Count bool
+
+	// The VARIABLE that will be requested
+	Variable variables.RuleVariable
 }
 
 type ruleTransformationParams struct {
@@ -83,21 +83,34 @@ type ruleTransformationParams struct {
 // Rule is used to test a Transaction against certain operators
 // and execute actions
 type Rule struct {
-	corazarules.RuleMetadata
-	// Contains a list of variables that will be compiled
-	// by a transaction
-	variables []ruleVariableParams
+
+	// Message text to be macro expanded and logged
+	// In future versions we might use a special type of string that
+	// supports cached macro expansions. For performance
+	Msg macro.Macro
+
+	// Rule logdata
+	LogData macro.Macro
+
+	memoizer plugintypes.Memoizer
 
 	// Contains a pointer to the operator struct used
 	// SecActions and SecMark can have nil Operators
 	operator *ruleOperatorParams
+
+	// Contains the child rule to chain, nil if there are no chains
+	Chain *Rule
+
+	corazarules.RuleMetadata
+	// Contains a list of variables that will be compiled
+	// by a transaction
+	variables []ruleVariableParams
 
 	// List of transformations to be evaluated
 	// In the future, transformations might be run by the
 	// action itself, not sure yet
 	transformations []ruleTransformationParams
 
-	transformationsID int
 	// transformationPrefixIDs holds the chain ID at each step of the transformation chain.
 	// transformationPrefixIDs[i] is the ID representing transformations [0..i].
 	// This enables prefix-based caching: rules sharing a common transformation prefix
@@ -108,24 +121,21 @@ type Rule struct {
 	// the rule evaluation process
 	actions []ruleActionParams
 
-	// Capture is used by the transaction to tell the operator
-	// to capture variables on TX:0-9
-	Capture bool
-
-	// Contains the child rule to chain, nil if there are no chains
-	Chain *Rule
+	transformationsID int
 
 	// DisruptiveStatus is the status that will be set to interruptions
 	// by disruptive rules
 	DisruptiveStatus int
 
-	// Message text to be macro expanded and logged
-	// In future versions we might use a special type of string that
-	// supports cached macro expansions. For performance
-	Msg macro.Macro
+	// chainMinPhase is the minimum phase among all chain variables.
+	// We do not eagerly evaluate variables in multiphase evaluation
+	// if they would be earlier than chained rules as they could never
+	// match.
+	chainMinPhase types.RulePhase
 
-	// Rule logdata
-	LogData macro.Macro
+	// Capture is used by the transaction to tell the operator
+	// to capture variables on TX:0-9
+	Capture bool
 
 	// If true, triggering this rule write to the error log
 	Log bool
@@ -143,17 +153,9 @@ type Rule struct {
 	// Multiphase specific field
 	inferredPhases
 
-	// chainMinPhase is the minimum phase among all chain variables.
-	// We do not eagerly evaluate variables in multiphase evaluation
-	// if they would be earlier than chained rules as they could never
-	// match.
-	chainMinPhase types.RulePhase
-
 	// chainedRules containing rules with just PhaseUnknown variables, may potentially
 	// be anticipated. This boolean ensures that it happens
 	withPhaseUnknownVariable bool
-
-	memoizer plugintypes.Memoizer
 }
 
 func (r *Rule) ParentID() int {

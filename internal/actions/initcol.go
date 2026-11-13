@@ -24,8 +24,8 @@ import (
 // ```
 type initcolFn struct {
 	collection string
-	variable   byte
 	key        string
+	variable   byte
 }
 
 func (a *initcolFn) Init(_ plugintypes.RuleMetadata, data string) error {

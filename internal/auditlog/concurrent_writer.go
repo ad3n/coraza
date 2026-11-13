@@ -18,13 +18,13 @@ import (
 )
 
 type concurrentWriter struct {
+	formatter plugintypes.AuditLogFormatter
+	io.Closer
 	mux         *sync.RWMutex
 	log         *log.Logger
 	logDir      string
 	logDirMode  fs.FileMode
 	logFileMode fs.FileMode
-	formatter   plugintypes.AuditLogFormatter
-	io.Closer
 }
 
 func (cl *concurrentWriter) Init(c plugintypes.AuditLogConfig) error {

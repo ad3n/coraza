@@ -37,9 +37,9 @@ const timeout = 500 * time.Millisecond
 // SecRule REMOTE_ADDR "@rbl dnsbl.example.com" "id:184,deny"
 // ```
 type rbl struct {
-	service    string
-	resolver   *net.Resolver
 	resultPool sync.Pool
+	resolver   *net.Resolver
+	service    string
 }
 
 type rblResult struct {

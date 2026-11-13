@@ -17,11 +17,11 @@ import (
 // It will handle memory usage for buffering and processing
 // It implements io.Copy(bodyBuffer, someReader) by inherit io.Writer
 type BodyBuffer struct {
-	options types.BodyBufferOptions
 	buffer  *bytes.Buffer
 	writer  *os.File
-	length  int64
 	readers []*bodyBufferReader
+	options types.BodyBufferOptions
+	length  int64
 }
 
 var (
@@ -100,8 +100,8 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 }
 
 type bodyBufferReader struct {
-	pos int
 	br  *BodyBuffer
+	pos int
 }
 
 func (b *bodyBufferReader) Read(p []byte) (n int, err error) {

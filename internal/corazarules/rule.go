@@ -10,24 +10,24 @@ import (
 // RuleMetadata is used to store rule metadata
 // that can be used across packages
 type RuleMetadata struct {
-	ID_ int
 	// Stores the string representation of the rule ID for logging purposes.
 	// If the rule is part of a chain, the parent ID is used as log ID.
 	// This approach prevents repeated computations in performance-critical sections, enhancing efficiency.
 	// It is stored for performance reasons, avoiding to perfrom the computation multiple times in the hot path
 	LogID_    string
 	File_     string
-	Line_     int
 	Rev_      string
-	Severity_ types.RuleSeverity
 	Version_  string
-	Tags_     []string
-	Maturity_ int
-	Accuracy_ int
 	Operator_ string
-	Phase_    types.RulePhase
 	Raw_      string
 	SecMark_  string
+	Tags_     []string
+	ID_       int
+	Line_     int
+	Severity_ types.RuleSeverity
+	Maturity_ int
+	Accuracy_ int
+	Phase_    types.RulePhase
 	// Contains the Id of the parent rule if you are inside
 	// a chain. Otherwise, it will be 0
 	ParentID_ int
