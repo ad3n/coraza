@@ -167,7 +167,50 @@ func prefilterFunc(pattern string) func(string) bool {
 	}
 
 	re = re.Simplify()
+	pf := literalPrefilter(re)
+	if len(pattern) < 512 {
+		return pf
+	}
 
+	clauses := requiredRuneClauses(re)
+	if len(clauses) == 0 || clauses[0] == [2]uint64{} {
+		return pf
+	}
+
+	return func(s string) bool {
+		if pf != nil && !pf(s) {
+			return false
+		}
+
+		if len(s) < 128 {
+			return true
+		}
+
+		var seen [2]uint64
+		for i := 0; i < len(s); i++ {
+			c := s[i]
+			if c >= utf8.RuneSelf {
+				return true
+			}
+
+			if c >= 'A' && c <= 'Z' {
+				c += 'a' - 'A'
+			}
+
+			seen[c/64] |= 1 << (c % 64)
+		}
+
+		for _, clause := range clauses {
+			if seen[0]&clause[0] == clause[0] && seen[1]&clause[1] == clause[1] {
+				return true
+			}
+		}
+
+		return false
+	}
+}
+
+func literalPrefilter(re *syntax.Regexp) func(string) bool {
 	caseInsensitive := hasFlag(re, syntax.FoldCase)
 
 	// Compute the minimum byte length any matching input must have.
@@ -1308,4 +1351,85 @@ func requiredRunes(re *syntax.Regexp) []rune {
 	}
 
 	return nil
+}
+
+func requiredRuneClauses(re *syntax.Regexp) [][2]uint64 {
+	const limit = 64
+	empty := [][2]uint64{{}}
+	switch re.Op {
+	case syntax.OpLiteral:
+		var mask [2]uint64
+		for _, r := range re.Rune {
+			if r >= utf8.RuneSelf {
+				continue
+			}
+
+			if r >= 'A' && r <= 'Z' {
+				r += 'a' - 'A'
+			}
+
+			mask[r/64] |= 1 << (r % 64)
+		}
+
+		return [][2]uint64{mask}
+	case syntax.OpConcat:
+		result := empty
+		for _, sub := range re.Sub {
+			next := requiredRuneClauses(sub)
+			if len(result)*len(next) > limit {
+				continue
+			}
+
+			var combined [][2]uint64
+			for _, a := range result {
+				for _, b := range next {
+					combined = appendRuneClause(combined, [2]uint64{a[0] | b[0], a[1] | b[1]})
+				}
+			}
+
+			result = combined
+		}
+
+		return result
+	case syntax.OpAlternate:
+		var result [][2]uint64
+		for _, sub := range re.Sub {
+			for _, clause := range requiredRuneClauses(sub) {
+				result = appendRuneClause(result, clause)
+				if len(result) > limit {
+					return empty
+				}
+			}
+		}
+
+		return result
+	case syntax.OpCapture, syntax.OpPlus:
+		return requiredRuneClauses(re.Sub[0])
+	case syntax.OpRepeat:
+		if re.Min > 0 {
+			return requiredRuneClauses(re.Sub[0])
+		}
+	}
+
+	return empty
+}
+
+func appendRuneClause(clauses [][2]uint64, candidate [2]uint64) [][2]uint64 {
+	for _, c := range clauses {
+		if candidate[0]&c[0] == c[0] && candidate[1]&c[1] == c[1] {
+			return clauses
+		}
+	}
+
+	n := 0
+	for _, c := range clauses {
+		if c[0]&candidate[0] == candidate[0] && c[1]&candidate[1] == candidate[1] {
+			continue
+		}
+
+		clauses[n] = c
+		n++
+	}
+
+	return append(clauses[:n], candidate)
 }

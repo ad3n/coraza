@@ -155,10 +155,7 @@ func (o *rx) Evaluate(tx plugintypes.TransactionState, value string) bool {
 		return false
 	}
 
-	// Gap 2: exact-match bypass for patterns like ^Upload$ — skip the NFA entirely.
-	// The \n guard protects against multi-line inputs where (?m)$ matches
-	// before a newline (e.g. "Upload\nmore" would satisfy (?sm)^Upload$).
-	if o.exactMatch != "" && !strings.ContainsRune(value, '\n') {
+	if o.exactMatch != "" && !tx.Capturing() && !strings.ContainsRune(value, '\n') {
 		if o.exactMatchCI {
 			return strings.EqualFold(value, o.exactMatch)
 		}

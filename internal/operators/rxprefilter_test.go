@@ -340,6 +340,12 @@ func TestPrefilterCapturingCorrectness(t *testing.T) {
 		captures map[int]string // expected capture group index → value
 	}{
 		{
+			pattern:  strings.Repeat("(?:a?|b?)", 64) + "(c.*d)",
+			input:    strings.Repeat("c", 128) + "d",
+			captures: map[int]string{0: strings.Repeat("c", 128) + "d", 1: strings.Repeat("c", 128) + "d"},
+		},
+
+		{
 			pattern:  "som(.*)ta",
 			input:    "somedata",
 			captures: map[int]string{0: "somedata", 1: "eda"},
@@ -1052,6 +1058,13 @@ func FuzzPrefilterNoFalseNegatives(f *testing.F) {
 				pattern, input, len(input), ml)
 		}
 
+		longInput := strings.Repeat(" ", 128) + input
+		longPattern := strings.Repeat("(?:)", 128) + pattern
+		longPF := prefilterFunc(longPattern)
+		if longPF != nil && re.MatchString(longInput) && !longPF(longInput) {
+			t.Fatalf("false negative via clause prefilter: pattern=%q input=%q", pattern, longInput)
+		}
+
 		pf := prefilterFunc(pattern)
 		if pf != nil && regexMatches && !pf(input) {
 			t.Errorf("FALSE NEGATIVE via prefilter: pattern=%q input=%q",
@@ -1132,6 +1145,14 @@ func FuzzPrefilterFixedCRSPatterns(f *testing.F) {
 // extractLiterals via table-driven cases.  Each entry targets a particular
 // branch/guard to ensure coverage without needing a dedicated function.
 func TestPrefilterCodePaths(t *testing.T) {
+	prefix := strings.Repeat("(?:a?|b?)", 64)
+	var branches []string
+	for a := 'a'; a <= 'l'; a++ {
+		for b := a + 1; b <= 'l'; b++ {
+			branches = append(branches, fmt.Sprintf("(%c.*%c)", a, b))
+		}
+	}
+
 	tests := []struct {
 		name    string
 		pattern string
@@ -1139,6 +1160,13 @@ func TestPrefilterCodePaths(t *testing.T) {
 		pass    string // input the prefilter must accept (skip if "")
 		reject  string // input the prefilter must reject (skip if "")
 	}{
+		{"clause_all_required", prefix + `(?:c.*d|e.*f)`, true, strings.Repeat("c", 128) + "d", strings.Repeat("c", 128)},
+		{"clause_alternative", prefix + `(?:c.*d|e.*f)`, true, strings.Repeat("e", 128) + "f", strings.Repeat("e", 128)},
+		{"clause_optional_branch", prefix + `(?:c.*d|e*)`, false, "", ""},
+		{"clause_fold_ascii", prefix + `(?i)(?:c.*d|e.*f)`, true, strings.Repeat("C", 128) + "D", strings.Repeat("C", 128)},
+		{"clause_unicode_fold", prefix + `(?i)(?:s.*k|c.*d)`, true, strings.Repeat(" ", 128) + "ſK", strings.Repeat("s", 128)},
+		{"clause_budget_fallback", strings.Join(branches, "|"), true, strings.Repeat("a", 128) + "b", ""},
+
 		{"required_class", `[0-9]+`, true, "123", "abc"},
 		{"required_obfuscated_letters", `(?i)a[ _]*b`, true, "A _B", "aaaa"},
 		{"required_alternate", `(?:a[ _]*b|[0-9]+)`, true, "7", "safe"},
@@ -1814,44 +1842,51 @@ func TestInternalNodeCoverage(t *testing.T) {
 }
 
 func TestPrefilterConcurrentSafety(t *testing.T) {
-	rxPattern := `(?i)(?:union\s+select|insert\s+into|delete\s+from)`
-	opts := plugintypes.OperatorOptions{Arguments: rxPattern, RxPreFilterEnabled: true}
-	op, err := newRX(opts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if op.(*rx).prefilter == nil {
-		t.Skip("prefilter not built")
-	}
-	re := regexp.MustCompile(rxPattern)
-	inputs := []string{
-		"union select * from t", "INSERT INTO t VALUES",
-		"normal request", "GET /index.html HTTP/1.1",
-		"delete from users", "", "UNION SELECT 1,2,3",
-	}
-	const goroutines = 100
-	errs := make(chan error, goroutines*len(inputs))
-	done := make(chan struct{})
-	for range goroutines {
-		go func() {
-			defer func() { done <- struct{}{} }()
-			for _, inp := range inputs {
-				waf := corazawaf.NewWAF()
-				tx := waf.NewTransaction()
-				tx.Capture = true
-				got := op.Evaluate(tx, inp)
-				if want := re.MatchString(inp); got != want {
-					errs <- fmt.Errorf("input %q: got %v, want %v", inp, got, want)
-				}
+	for _, rxPattern := range []string{
+		`(?i)(?:union\s+select|insert\s+into|delete\s+from)`,
+		strings.Repeat("(?:a?|b?)", 64) + `(?i)(?:c.*d|e.*f)`,
+	} {
+		t.Run(fmt.Sprintf("pattern_length_%d", len(rxPattern)), func(t *testing.T) {
+			opts := plugintypes.OperatorOptions{Arguments: rxPattern, RxPreFilterEnabled: true}
+			op, err := newRX(opts)
+			if err != nil {
+				t.Fatal(err)
 			}
-		}()
-	}
-	for range goroutines {
-		<-done
-	}
-	close(errs)
-	for err := range errs {
-		t.Error(err)
+			if op.(*rx).prefilter == nil {
+				t.Skip("prefilter not built")
+			}
+			re := regexp.MustCompile(rxPattern)
+			inputs := []string{
+				"union select * from t", "INSERT INTO t VALUES",
+				"normal request", "GET /index.html HTTP/1.1",
+				"delete from users", "", "UNION SELECT 1,2,3",
+				strings.Repeat("c", 128), strings.Repeat("C", 128) + "D", strings.Repeat("e", 128) + "f",
+			}
+			const goroutines = 100
+			errs := make(chan error, goroutines*len(inputs))
+			done := make(chan struct{})
+			for range goroutines {
+				go func() {
+					defer func() { done <- struct{}{} }()
+					for _, inp := range inputs {
+						waf := corazawaf.NewWAF()
+						tx := waf.NewTransaction()
+						tx.Capture = true
+						got := op.Evaluate(tx, inp)
+						if want := re.MatchString(inp); got != want {
+							errs <- fmt.Errorf("input %q: got %v, want %v", inp, got, want)
+						}
+					}
+				}()
+			}
+			for range goroutines {
+				<-done
+			}
+			close(errs)
+			for err := range errs {
+				t.Error(err)
+			}
+		})
 	}
 }
 

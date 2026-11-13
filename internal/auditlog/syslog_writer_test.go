@@ -163,7 +163,7 @@ func Test_syslogWriter_Write(t *testing.T) {
 			},
 			want: want{
 				priority: syslog.LOG_INFO,
-				message:  `{"transaction":{"timestamp":"","unix_timestamp":0,"id":"42","client_ip":"","client_port":0,"host_ip":"","host_port":0,"server_id":"","highest_severity":"","is_interrupted":false}}`,
+				message:  `{"transaction":{"timestamp":"","id":"42","client_ip":"","host_ip":"","server_id":"","highest_severity":"","unix_timestamp":0,"client_port":0,"host_port":0,"is_interrupted":false}}`,
 			},
 		},
 		{

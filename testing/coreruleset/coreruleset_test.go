@@ -256,6 +256,17 @@ func BenchmarkCRSPrefilter(b *testing.B) {
 		}
 	}
 
+	for _, scenario := range []struct{ name, value string }{
+		{"LongAlphabet", strings.Repeat("abcdefghijklmnopqrstuvwxyz", 400)},
+		{"LongUnicode", strings.Repeat("κόσμε", 2000)},
+		{"LongCommand", strings.Repeat("a", 10000) + "; cat /etc/passwd"},
+	} {
+		body := []byte("content=" + url.QueryEscape(scenario.value))
+		b.Run("LongInput/"+scenario.name, func(b *testing.B) {
+			doPOST(b, "/submit", "application/x-www-form-urlencoded", body, nil)
+		})
+	}
+
 	// ===== Benign traffic =====
 
 	b.Run("Benign/APICall", func(b *testing.B) {

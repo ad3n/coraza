@@ -177,3 +177,22 @@ SecRule ARGS:key2[] "@contains newValue" "id:11,phase:2,pass,setvar:'tx.macro_ex
 SecRule ARGS_POST:key2[name] "@contains PaYlOaD" "id:12,phase:2,pass,log,logdata:'Message from rule 12: %{MATCHED_VAR_NAME}, macro expansion: %{ARGS_POST.key2[name]}'"
 `,
 })
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{Author: "Codex", Description: "Exact literal prefilter preserves full and outer captures", Enabled: true, Name: "rx_prefilter_captures.yaml"},
+	Rules: `
+SecRuleEngine On
+SecRxPreFilter On
+SecRule ARGS:captured "@rx (^hello$)" "id:1,phase:1,pass,log,capture"
+SecRule TX:0 "@streq hello" "id:2,phase:1,pass,log,chain"
+ SecRule TX:1 "@streq hello"
+`,
+	Tests: []profile.Test{
+		{Title: "anchored literal captures full match and outer group", Stages: []profile.Stage{{Stage: profile.SubStage{
+			Input: profile.StageInput{URI: "/?captured=hello"}, Output: profile.ExpectedOutput{TriggeredRules: []int{1, 2}},
+		}}}},
+		{Title: "nonmatching literal leaves capture checks unmatched", Stages: []profile.Stage{{Stage: profile.SubStage{
+			Input: profile.StageInput{URI: "/?captured=other"}, Output: profile.ExpectedOutput{NonTriggeredRules: []int{1, 2}},
+		}}}},
+	},
+})
